@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
+import { AuthShell, safeNextPath } from "@/components/AuthShell";
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -21,30 +22,41 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await register(email, fullName, password);
-      router.push("/dashboard");
+      router.push(safeNextPath() ?? "/dashboard");
     } catch (err) {
-      if (err instanceof ApiError) setError(String(err.detail));
+      if (err instanceof ApiError) setError(typeof err.detail === "string" ? err.detail : "Please check your details.");
       else setError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
+  const [next, setNext] = useState<string | null>(null);
+  useEffect(() => setNext(safeNextPath()), []);
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+
   return (
-    <div className="max-w-md mx-auto card">
-      <h1 className="text-2xl font-semibold mb-6 text-brand-800">Create your account</h1>
-      <form onSubmit={onSubmit} className="space-y-4">
+    <AuthShell eyebrow="Begin your assessment" title="Create your account">
+      <form onSubmit={onSubmit} className="space-y-5">
         <div>
-          <label className="label">Full name</label>
-          <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          <label className="label" htmlFor="name">
+            Full name
+          </label>
+          <input id="name" className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          <p className="mt-1.5 text-xs text-brand-400">Your first name appears on your bottle.</p>
         </div>
         <div>
-          <label className="label">Email</label>
-          <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label className="label" htmlFor="email">
+            Email
+          </label>
+          <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div>
-          <label className="label">Password</label>
+          <label className="label" htmlFor="password">
+            Password
+          </label>
           <input
+            id="password"
             type="password"
             className="input"
             value={password}
@@ -52,19 +64,19 @@ export default function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <p className="text-xs text-brand-400 mt-1">At least 8 characters.</p>
+          <p className="mt-1.5 text-xs text-brand-400">At least 8 characters.</p>
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-700">{error}</p>}
         <button type="submit" className="btn-primary w-full" disabled={submitting}>
           {submitting ? "Creating account..." : "Create account"}
         </button>
       </form>
-      <p className="text-sm text-brand-500 mt-4">
+      <p className="mt-6 text-sm text-brand-500">
         Already have an account?{" "}
-        <Link href="/login" className="text-brand-700 underline">
+        <Link href={loginHref} className="text-brand-900 underline underline-offset-4">
           Log in
         </Link>
       </p>
-    </div>
+    </AuthShell>
   );
 }

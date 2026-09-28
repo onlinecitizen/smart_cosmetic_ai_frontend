@@ -1,34 +1,50 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
-import { ScoreBar } from "@/components/ScoreBar";
+import { Reveal } from "@/components/Reveal";
+import { Bottle } from "@/components/Bottle";
+import { StepIndicator } from "@/components/assessment/StepIndicator";
+import { ScoreRing } from "@/components/assessment/ScoreRing";
+import { AnalysisSequence, ANALYSIS_MESSAGES, ANALYSIS_STEP_MS } from "@/components/assessment/AnalysisSequence";
 import { api, ApiError, ClimateSnapshot, DiagnosticResult, DiagnosticSession, Formula } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { firstName } from "@/lib/product";
 
-type Step = "intro" | "consent" | "camera" | "captured" | "analyzing" | "results" | "climate" | "formula";
+type Step = "consent" | "capture" | "preview" | "analyzing" | "results";
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function describeError(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 401) return "Your session has expired. Please log in again.";
+    if (err.status === 403) return "We couldn't verify your session. Please refresh the page and try again.";
+    if (err.status === 413) return "That photo is too large. Please use a smaller image.";
+  }
+  return "Something went wrong during analysis. Please try again.";
+}
 
 function AnalyzeContent() {
-  const router = useRouter();
-  const [step, setStep] = useState<Step>("intro");
+  const { user } = useAuth();
+  const [step, setStep] = useState<Step>("consent");
   const [error, setError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // Refs don't trigger re-renders, so track "camera is live" in state too;
+  // otherwise the Capture button never appears after the stream starts.
+  const [cameraOn, setCameraOn] = useState(false);
 
   const [session, setSession] = useState<DiagnosticSession | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
-
-  const [region, setRegion] = useState("Zanzibar Urban/West, Tanzania");
+  const [region, setRegion] = useState("");
   const [climate, setClimate] = useState<ClimateSnapshot | null>(null);
   const [formula, setFormula] = useState<Formula | null>(null);
   const [busy, setBusy] = useState(false);
-  // Refs don't trigger re-renders, so track "camera is live" in state too;
-  // otherwise the Capture button never appears after the stream starts.
-  const [cameraOn, setCameraOn] = useState(false);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -38,13 +54,20 @@ function AnalyzeContent() {
 
   useEffect(() => stopCamera, [stopCamera]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
+
   async function acceptConsent() {
     setError(null);
+    setBusy(true);
     try {
       await api.post("/api/v1/diagnostics/consent", { granted: true, consent_type: "facial_image_processing" });
-      setStep("camera");
-    } catch {
-      setError("Could not record consent. Please try again.");
+      setStep("capture");
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 401 ? describeError(err) : "Could not record consent. Please try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -59,9 +82,7 @@ function AnalyzeContent() {
         await videoRef.current.play();
       }
     } catch {
-      setError(
-        "Camera access was denied or is unavailable. You can also upload a photo below instead."
-      );
+      setError("Camera access was denied or is unavailable. You can upload a photo instead.");
     }
   }
 
@@ -80,7 +101,7 @@ function AnalyzeContent() {
         setCapturedBlob(blob);
         setCapturedUrl(URL.createObjectURL(blob));
         stopCamera();
-        setStep("captured");
+        setStep("preview");
       },
       "image/jpeg",
       0.9
@@ -89,248 +110,335 @@ function AnalyzeContent() {
 
   function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
+    stopCamera();
     setCapturedBlob(file);
     setCapturedUrl(URL.createObjectURL(file));
-    setStep("captured");
+    setStep("preview");
   }
 
-  async function submitCapture() {
-    if (!capturedBlob) return;
+  function retake() {
+    setCapturedBlob(null);
+    setCapturedUrl(null);
+    setStep("capture");
+  }
+
+  function startOver() {
+    setSession(null);
+    setResult(null);
+    setClimate(null);
+    setFormula(null);
+    setError(null);
+    retake();
+  }
+
+  async function analyze(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!capturedBlob || !region.trim()) return;
     setBusy(true);
     setError(null);
     setStep("analyzing");
-    try {
+
+    const minimumShowtime = sleep(ANALYSIS_MESSAGES.length * ANALYSIS_STEP_MS + 300);
+
+    const work = (async () => {
+      // Reuse an already-analyzed session (e.g. when only the climate or
+      // formula step failed) - the backend rejects re-analyzing a session.
       let currentSession = session;
-      if (!currentSession) {
+      let analyzed = result;
+      if (!currentSession || !analyzed) {
         currentSession = await api.post<DiagnosticSession>("/api/v1/diagnostics/sessions");
         setSession(currentSession);
+        const form = new FormData();
+        form.append("image", capturedBlob, "capture.jpg");
+        analyzed = await api.postForm<DiagnosticResult>(
+          `/api/v1/diagnostics/sessions/${currentSession.id}/analyze`,
+          form
+        );
+        setResult(analyzed);
       }
+      const reading = await api.post<ClimateSnapshot>("/api/v1/climate", { region: region.trim() });
+      setClimate(reading);
+      const generated = await api.post<Formula>("/api/v1/formulas", {
+        diagnostic_session_id: currentSession.id,
+        climate_snapshot_id: reading.id,
+      });
+      setFormula(generated);
+    })();
 
-      const form = new FormData();
-      form.append("image", capturedBlob, "capture.jpg");
-      const analyzed = await api.postForm<DiagnosticResult>(
-        `/api/v1/diagnostics/sessions/${currentSession.id}/analyze`,
-        form
-      );
-      setResult(analyzed);
+    try {
+      await Promise.all([work, minimumShowtime]);
       setStep("results");
     } catch (err) {
       if (err instanceof ApiError && err.status === 422) {
         const detail = err.detail as { message?: string; reasons?: string[] };
+        const reasons = (detail?.reasons || []).map((r) => r.replace(/_/g, " "));
         setError(
-          `${detail.message || "Image quality insufficient."} ${
-            detail.reasons?.length ? `(${detail.reasons.join(", ")})` : ""
-          } Please retake the photo.`
+          `${detail?.message || "Image quality insufficient."}${reasons.length ? ` (${reasons.join(", ")})` : ""} ` +
+            "Try facing a window or lamp and holding still."
         );
         setSession(null);
-        setCapturedBlob(null);
-        setCapturedUrl(null);
-        setStep("camera");
+        setResult(null);
+        retake();
       } else {
-        setError("Analysis failed. Please try again.");
-        setStep("captured");
+        setError(describeError(err));
+        setStep("preview");
       }
     } finally {
       setBusy(false);
     }
   }
 
-  async function fetchClimate() {
-    setBusy(true);
-    setError(null);
-    try {
-      const reading = await api.post<ClimateSnapshot>("/api/v1/climate", { region });
-      setClimate(reading);
-      setStep("formula");
-    } catch {
-      setError("Could not fetch climate data. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function generateFormula() {
-    if (!session || !climate) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const f = await api.post<Formula>("/api/v1/formulas", {
-        diagnostic_session_id: session.id,
-        climate_snapshot_id: climate.id,
-      });
-      setFormula(f);
-    } catch {
-      setError("Could not generate a formula. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const indicator: 1 | 2 | 3 | 4 =
+    step === "analyzing" ? 2 : step === "results" ? (formula?.status === "VALIDATED" ? 4 : 3) : 1;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold text-brand-800">Skin Diagnostic</h1>
+    <div className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6">
+      <StepIndicator current={indicator} />
 
-      {error && <div className="card border-red-200 bg-red-50 text-red-700 text-sm">{error}</div>}
-
-      {step === "intro" && (
-        <div className="card space-y-4">
-          <p className="text-brand-600">
-            This assessment uses your browser camera to estimate cosmetic skin indicators:
-            hydration, redness, pore density and barrier strength. It is not a medical
-            diagnosis and does not replace a dermatologist.
-          </p>
-          <button className="btn-primary" onClick={() => setStep("consent")}>
-            Continue
-          </button>
+      {error && (
+        <div className="mt-8 rounded-2xl border border-red-200 bg-red-50/80 px-5 py-4 text-sm text-red-800" role="alert">
+          {error}
         </div>
       )}
 
       {step === "consent" && (
-        <div className="card space-y-4">
-          <h2 className="font-semibold text-brand-700">Consent to process a facial image</h2>
-          <p className="text-sm text-brand-600">
-            Your captured photo is processed to produce diagnostic scores and then deleted. It is
-            never permanently stored or made publicly accessible.
-          </p>
-          <button className="btn-primary" onClick={acceptConsent}>
-            I agree, continue
-          </button>
-        </div>
+        <section className="mt-12 grid items-center gap-12 md:grid-cols-2">
+          <Reveal>
+            <p className="eyebrow">Step 01 · Capture</p>
+            <h1 className="display mt-4 text-5xl sm:text-6xl">Let’s begin with your skin.</h1>
+            <p className="mt-6 leading-relaxed text-brand-600">
+              We’ll take one photo with your camera to estimate hydration, redness, pore density and barrier
+              strength. It takes about two minutes.
+            </p>
+          </Reveal>
+          <Reveal delay={150}>
+            <div className="glass space-y-6 p-8">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-900">Your privacy</h2>
+              <ul className="space-y-4 text-sm leading-relaxed text-brand-600">
+                <li className="flex gap-3">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-gold-500" />
+                  Your photo is processed to produce your skin profile, then deleted.
+                </li>
+                <li className="flex gap-3">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-gold-500" />
+                  It is never stored permanently, made public, or sent to the laboratory.
+                </li>
+                <li className="flex gap-3">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-gold-500" />
+                  Results are cosmetic estimates, not a medical diagnosis.
+                </li>
+              </ul>
+              <button className="btn-primary w-full" onClick={acceptConsent} disabled={busy}>
+                {busy ? "One moment..." : "I agree, begin"}
+              </button>
+            </div>
+          </Reveal>
+        </section>
       )}
 
-      {step === "camera" && (
-        <div className="card space-y-4">
-          <div className="relative aspect-[4/3] bg-brand-900 rounded-xl overflow-hidden flex items-center justify-center">
-            <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-2/3 h-4/5 border-2 border-white/70 rounded-[50%]" />
+      {step === "capture" && (
+        <section className="mt-12 grid items-center gap-10 md:grid-cols-[1.2fr_1fr]">
+          <div className="relative mx-auto aspect-[3/4] w-full max-w-md overflow-hidden rounded-[2rem] bg-brand-900 shadow-lift">
+            <video
+              ref={videoRef}
+              className={`h-full w-full -scale-x-100 object-cover transition-opacity duration-700 ${cameraOn ? "opacity-100" : "opacity-0"}`}
+              playsInline
+              muted
+            />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="relative h-[72%] w-[66%]">
+                <div className="absolute inset-0 rounded-[50%] border border-gold-300/80" />
+                {cameraOn && <div className="pulse-ring absolute inset-0 rounded-[50%] border border-gold-300/60" />}
+              </div>
+            </div>
+            {[
+              "left-5 top-5 border-l border-t",
+              "right-5 top-5 border-r border-t",
+              "left-5 bottom-5 border-l border-b",
+              "right-5 bottom-5 border-r border-b",
+            ].map((c) => (
+              <span key={c} className={`pointer-events-none absolute h-6 w-6 border-gold-300/80 ${c}`} aria-hidden />
+            ))}
+            {!cameraOn && (
+              <div className="absolute inset-0 grid place-items-center">
+                <button className="btn-gold" onClick={startCamera}>
+                  Enable camera
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="eyebrow">Step 01 · Capture</p>
+            <h1 className="display mt-4 text-4xl sm:text-5xl">Frame your face.</h1>
+            <ul className="mt-6 space-y-3 text-sm text-brand-600">
+              <li>Center your face inside the outline.</li>
+              <li>Face a window or soft light — avoid strong backlight.</li>
+              <li>Remove glasses and hold still.</li>
+            </ul>
+            <div className="mt-8 flex flex-col gap-3">
+              {cameraOn && (
+                <button className="btn-primary" onClick={captureFrame}>
+                  Capture photo
+                </button>
+              )}
+              <label className="btn-secondary cursor-pointer">
+                Upload a photo instead
+                <input type="file" accept="image/*" className="hidden" onChange={onFileSelected} />
+              </label>
             </div>
           </div>
-          <p className="text-xs text-brand-400">
-            Center your face within the outline, in good lighting, and hold still.
-          </p>
-          <div className="flex gap-3 flex-wrap">
-            {!cameraOn && (
-              <button className="btn-primary" onClick={startCamera}>
-                Enable camera
-              </button>
-            )}
-            {cameraOn && (
-              <button className="btn-primary" onClick={captureFrame}>
-                Capture photo
-              </button>
-            )}
-            <label className="btn-secondary cursor-pointer">
-              Upload a photo instead
-              <input type="file" accept="image/*" className="hidden" onChange={onFileSelected} />
-            </label>
-          </div>
-        </div>
+        </section>
       )}
 
-      {step === "captured" && capturedUrl && (
-        <div className="card space-y-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={capturedUrl} alt="Captured preview" className="rounded-xl w-full max-h-96 object-cover" />
-          <div className="flex gap-3">
-            <button className="btn-primary" onClick={submitCapture} disabled={busy}>
-              Use this photo
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                setCapturedBlob(null);
-                setCapturedUrl(null);
-                setStep("camera");
-              }}
-            >
-              Retake
-            </button>
+      {step === "preview" && capturedUrl && (
+        <section className="mt-12 grid items-center gap-10 md:grid-cols-2">
+          <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-[2rem] shadow-lift">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={capturedUrl} alt="Your captured photo" className="h-full w-full object-cover" />
           </div>
-        </div>
+          <form onSubmit={analyze}>
+            <p className="eyebrow">Step 01 · Capture</p>
+            <h1 className="display mt-4 text-4xl sm:text-5xl">One last detail.</h1>
+            <p className="mt-4 text-brand-600">Where do you live? Your climate shapes your formula.</p>
+            <label className="label mt-8" htmlFor="region">
+              City and country
+            </label>
+            <input
+              id="region"
+              className="input"
+              placeholder="e.g. Dar es Salaam, Tanzania"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              required
+              maxLength={120}
+            />
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button type="submit" className="btn-primary flex-1" disabled={busy || !region.trim()}>
+                Analyze my skin
+              </button>
+              <button type="button" className="btn-secondary" onClick={retake} disabled={busy}>
+                Retake
+              </button>
+            </div>
+          </form>
+        </section>
       )}
 
       {step === "analyzing" && (
-        <div className="card text-center py-12">
-          <p className="text-brand-500 animate-pulse">Analyzing your capture...</p>
-        </div>
+        <section className="mt-12">
+          <AnalysisSequence photoUrl={capturedUrl} />
+        </section>
       )}
 
       {step === "results" && result && (
-        <div className="card space-y-5">
-          <div>
-            <h2 className="font-semibold text-brand-700">AI-estimated skin indicators</h2>
-            <p className="text-xs text-brand-400">
-              Cosmetic estimate only, not a medical diagnosis. Confidence: {Math.round(result.confidence * 100)}%
-              {result.confidence < 0.5 && " — this result may be less reliable; consider retaking under better lighting."}
-            </p>
-          </div>
-          <ScoreBar label="Hydration" value={result.hydration} helpText="Higher is more hydrated." />
-          <ScoreBar label="Redness" value={result.redness} helpText="Lower means less visible redness." invert />
-          <ScoreBar label="Pore density" value={result.pore_density} helpText="Lower means less visible pores." invert />
-          <ScoreBar label="Barrier index" value={result.barrier_index} helpText="Higher means a stronger skin barrier." />
-          <button className="btn-primary" onClick={() => setStep("climate")}>
-            Continue to climate analysis
-          </button>
-        </div>
-      )}
-
-      {step === "climate" && (
-        <div className="card space-y-4">
-          <h2 className="font-semibold text-brand-700">Where are you based?</h2>
-          <p className="text-sm text-brand-500">
-            Climate (temperature, humidity) is factored into your personalized formula.
-          </p>
-          <input className="input" value={region} onChange={(e) => setRegion(e.target.value)} />
-          <button className="btn-primary" onClick={fetchClimate} disabled={busy}>
-            {busy ? "Fetching..." : "Continue"}
-          </button>
-        </div>
-      )}
-
-      {step === "formula" && climate && (
-        <div className="card space-y-4">
-          <h2 className="font-semibold text-brand-700">Climate snapshot</h2>
-          <div className="grid grid-cols-3 gap-3 text-sm">
-            <div>
-              <p className="text-brand-400">Region</p>
-              <p className="font-medium">{climate.region}</p>
+        <div className="mt-14 space-y-20">
+          <section>
+            <Reveal className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+              <div>
+                <p className="eyebrow">Step 03 · Personalize</p>
+                <h1 className="display mt-4 text-5xl sm:text-6xl">Your skin profile</h1>
+              </div>
+              <div className="text-sm text-brand-500 md:text-right">
+                <p>Confidence {Math.round(result.confidence * 100)}%</p>
+                <p className="text-xs text-brand-400">
+                  AI estimate from one photo · model {result.model_version}
+                  {result.provider === "mock" && " (demonstration)"}
+                </p>
+              </div>
+            </Reveal>
+            {result.confidence < 0.5 && (
+              <p className="mt-6 text-sm text-brand-600">
+                This estimate may be less reliable — consider retaking in better lighting.
+              </p>
+            )}
+            <div className="mt-12 grid grid-cols-2 gap-y-12 md:grid-cols-4">
+              <ScoreRing label="Hydration" value={result.hydration} helpText="Higher means more hydrated." />
+              <ScoreRing label="Redness" value={result.redness} helpText="Lower means less visible redness." delay={150} />
+              <ScoreRing
+                label="Pore density"
+                value={result.pore_density}
+                helpText="Lower means less visible pores."
+                delay={300}
+              />
+              <ScoreRing
+                label="Barrier index"
+                value={result.barrier_index}
+                helpText="Higher means a stronger barrier."
+                delay={450}
+              />
             </div>
-            <div>
-              <p className="text-brand-400">Temperature</p>
-              <p className="font-medium">{climate.temperature_c}°C</p>
-            </div>
-            <div>
-              <p className="text-brand-400">Humidity</p>
-              <p className="font-medium">{Math.round(climate.humidity * 100)}%</p>
-            </div>
-          </div>
+          </section>
 
-          {!formula && (
-            <button className="btn-primary" onClick={generateFormula} disabled={busy}>
-              {busy ? "Generating formula..." : "Generate my formula"}
-            </button>
+          {climate && (
+            <section>
+              <Reveal>
+                <p className="eyebrow">Your environment</p>
+              </Reveal>
+              <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-brand-200/70 bg-brand-200/70 md:grid-cols-4">
+                {[
+                  { k: "Temperature", v: `${climate.temperature_c}°C` },
+                  { k: "Humidity", v: `${Math.round(climate.humidity * 100)}%` },
+                  { k: "UV index", v: climate.uv_index != null ? `${climate.uv_index}` : "—" },
+                  { k: "Region", v: climate.region },
+                ].map((d, i) => (
+                  <Reveal key={d.k} delay={i * 100} className="h-full">
+                    <div className="h-full bg-brand-50 p-6">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-400">{d.k}</p>
+                      <p className="display mt-3 break-words text-2xl sm:text-3xl">{d.v}</p>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+              <p className="mt-4 text-sm text-brand-500">
+                Your environment is considered when building your personalized formula.
+                {climate.provider === "mock" && <span className="text-brand-400"> Demo climate service.</span>}
+              </p>
+            </section>
           )}
 
-          {formula && (
-            <div className="border-t border-brand-100 pt-4 space-y-3">
-              <p className="font-mono text-brand-700">{formula.formula_code}</p>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  formula.status === "VALIDATED" ? "bg-brand-100 text-brand-700" : "bg-red-50 text-red-600"
-                }`}
-              >
-                {formula.status}
-              </span>
-              {formula.status === "VALIDATED" ? (
-                <button className="btn-primary block" onClick={() => router.push(`/formula/${formula.id}`)}>
-                  View formula & order
-                </button>
-              ) : (
-                <p className="text-sm text-red-600">{formula.validation_errors.join(" ")}</p>
+          {formula && formula.status === "VALIDATED" && (
+            <Reveal>
+              <section className="relative overflow-hidden rounded-[2rem] bg-brand-900 px-6 py-12 text-center sm:px-12">
+                <div
+                  className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(200,169,110,0.3)_0%,transparent_65%)]"
+                  aria-hidden
+                />
+                <div className="relative mx-auto h-72 w-40">
+                  <Bottle name={firstName(user?.full_name)} code={formula.formula_code} className="h-full w-full" />
+                </div>
+                <p className="relative mt-8 text-[11px] font-semibold uppercase tracking-[0.28em] text-gold-300">
+                  Step 04 · Formula
+                </p>
+                <h2 className="display relative mt-4 text-4xl !text-brand-50 sm:text-5xl">
+                  Your personalized formula is ready
+                </h2>
+                <Link href={`/formula/${formula.id}`} className="btn-gold relative mt-10">
+                  Meet my formula
+                </Link>
+              </section>
+            </Reveal>
+          )}
+
+          {formula && formula.status !== "VALIDATED" && (
+            <section className="card space-y-4">
+              <h2 className="display text-3xl">We couldn’t build a formula from this profile</h2>
+              <p className="text-sm text-brand-600">
+                For your safety, a formula is only offered when it passes every formulation check.
+              </p>
+              {formula.validation_errors.length > 0 && (
+                <ul className="list-disc space-y-1 pl-5 text-sm text-brand-500">
+                  {formula.validation_errors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
               )}
-            </div>
+              <button className="btn-primary" onClick={startOver}>
+                Start a new assessment
+              </button>
+            </section>
           )}
         </div>
       )}

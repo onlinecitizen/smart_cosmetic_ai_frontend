@@ -137,6 +137,8 @@ export interface Order {
   status: string;
   created_at: string;
   updated_at: string;
+  // Present from backend versions that return order line items.
+  items?: { quantity: number; batch_volume_ml: number }[];
 }
 
 export interface Ingredient {

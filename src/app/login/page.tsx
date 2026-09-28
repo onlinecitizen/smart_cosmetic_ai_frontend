@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
+import { AuthShell, safeNextPath } from "@/components/AuthShell";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -20,7 +21,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const user = await login(email, password);
-      router.push(user.role === "admin" ? "/admin" : "/dashboard");
+      router.push(safeNextPath() ?? (user.role === "admin" ? "/admin" : "/dashboard"));
     } catch (err) {
       if (err instanceof ApiError) setError("Invalid email or password.");
       else setError("Something went wrong. Please try again.");
@@ -29,17 +30,25 @@ export default function LoginPage() {
     }
   }
 
+  const [next, setNext] = useState<string | null>(null);
+  useEffect(() => setNext(safeNextPath()), []);
+  const registerHref = next ? `/register?next=${encodeURIComponent(next)}` : "/register";
+
   return (
-    <div className="max-w-md mx-auto card">
-      <h1 className="text-2xl font-semibold mb-6 text-brand-800">Log in</h1>
-      <form onSubmit={onSubmit} className="space-y-4">
+    <AuthShell eyebrow="Welcome back" title="Log in">
+      <form onSubmit={onSubmit} className="space-y-5">
         <div>
-          <label className="label">Email</label>
-          <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label className="label" htmlFor="email">
+            Email
+          </label>
+          <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div>
-          <label className="label">Password</label>
+          <label className="label" htmlFor="password">
+            Password
+          </label>
           <input
+            id="password"
             type="password"
             className="input"
             value={password}
@@ -47,24 +56,24 @@ export default function LoginPage() {
             required
           />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-700">{error}</p>}
         <button type="submit" className="btn-primary w-full" disabled={submitting}>
           {submitting ? "Logging in..." : "Log in"}
         </button>
       </form>
-      <p className="text-sm text-brand-500 mt-4">
-        Don&apos;t have an account?{" "}
-        <Link href="/register" className="text-brand-700 underline">
-          Sign up
+      <p className="mt-6 text-sm text-brand-500">
+        New to Smart Cosmetic AI?{" "}
+        <Link href={registerHref} className="text-brand-900 underline underline-offset-4">
+          Create an account
         </Link>
       </p>
-      <p className="text-xs text-brand-400 mt-6 border-t border-brand-100 pt-4">
+      <p className="mt-10 border-t border-brand-200 pt-5 text-xs leading-relaxed text-brand-400">
         Demo admin login: <code>admin@example.com</code> / <code>ChangeMe123!</code> (development only —
         change via ADMIN_EMAIL/ADMIN_PASSWORD before deploying anywhere real).
         <br />
         Demo customer with sample history: <code>demo@example.com</code> / <code>DemoCustomer123!</code>{" "}
         (only when the backend runs with SEED_DEMO_DATA=true).
       </p>
-    </div>
+    </AuthShell>
   );
 }

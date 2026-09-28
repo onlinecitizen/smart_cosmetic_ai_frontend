@@ -100,8 +100,8 @@ function AdminContent() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-brand-800">Admin</h1>
+    <div className="container-page space-y-6">
+      <h1 className="display text-4xl">Admin</h1>
 
       <div className="flex flex-wrap gap-2 border-b border-brand-100 pb-2">
         {TABS.map((t) => (

@@ -3,8 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
+import { Reveal } from "@/components/Reveal";
+import { Bottle } from "@/components/Bottle";
 import { api, Formula, Order } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { ORDER_STATUS_LABEL, firstName } from "@/lib/product";
+
+const fmtDate = (d: string) => new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
 function DashboardContent() {
   const { user } = useAuth();
@@ -18,73 +23,90 @@ function DashboardContent() {
         setFormulas(f);
         setOrders(o);
       })
+      .catch(() => undefined)
       .finally(() => setLoading(false));
   }, []);
 
+  const name = firstName(user?.full_name);
+  const latest = formulas.find((f) => f.status === "VALIDATED");
+  const codeById = Object.fromEntries(formulas.map((f) => [f.id, f.formula_code]));
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-brand-800">Welcome back, {user?.full_name}</h1>
-        <p className="text-brand-500 mt-1">Here&apos;s where things stand with your skin diagnostics and orders.</p>
-      </div>
-
-      <div className="card flex items-center justify-between">
-        <div>
-          <h2 className="font-semibold text-brand-700">Ready for a new diagnostic?</h2>
-          <p className="text-sm text-brand-500">Takes about 2 minutes with your camera.</p>
+    <div className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6">
+      <section className="grid items-center gap-10 md:grid-cols-[1.4fr_1fr]">
+        <Reveal>
+          <p className="eyebrow">Your account</p>
+          <h1 className="display mt-4 text-5xl sm:text-6xl">Welcome back{name ? `, ${name}` : ""}.</h1>
+          <p className="mt-4 max-w-md text-brand-600">
+            Your formulas and orders live here. Skin changes with the seasons — a new assessment takes about two
+            minutes.
+          </p>
+          <Link href="/analyze" className="btn-primary mt-8">
+            New skin assessment
+          </Link>
+        </Reveal>
+        <div className="mx-auto h-72 w-40">
+          <Bottle name={name} code={latest?.formula_code} className="h-full w-full" />
         </div>
-        <Link href="/analyze" className="btn-primary">
-          Start diagnostic
-        </Link>
-      </div>
+      </section>
 
-      <div>
-        <h2 className="font-semibold text-brand-700 mb-3">Your formulas</h2>
+      <section className="mt-20">
+        <h2 className="eyebrow mb-6">Your formulas</h2>
         {loading ? (
-          <p className="text-sm text-brand-400">Loading...</p>
+          <p className="text-sm text-brand-400">Loading…</p>
         ) : formulas.length === 0 ? (
-          <p className="text-sm text-brand-400">No formulas yet. Start a diagnostic to generate one.</p>
+          <div className="card text-sm text-brand-500">No formulas yet. Start an assessment to create your first.</div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-3">
-            {formulas.map((f) => (
-              <Link key={f.id} href={`/formula/${f.id}`} className="card hover:shadow-md transition-shadow block">
-                <div className="flex justify-between items-start">
-                  <span className="font-mono text-sm text-brand-700">{f.formula_code}</span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      f.status === "VALIDATED" ? "bg-brand-100 text-brand-700" : "bg-red-50 text-red-600"
-                    }`}
-                  >
-                    {f.status}
-                  </span>
-                </div>
-                <p className="text-xs text-brand-400 mt-2">{new Date(f.created_at).toLocaleString()}</p>
-              </Link>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {formulas.map((f, i) => (
+              <Reveal key={f.id} delay={Math.min(i, 5) * 80}>
+                <Link
+                  href={`/formula/${f.id}`}
+                  className="card block h-full transition duration-500 hover:-translate-y-1 hover:shadow-lift"
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="font-mono text-sm tracking-wider text-brand-900">{f.formula_code}</span>
+                    <span className={`chip ${f.status === "VALIDATED" ? "" : "!border-red-200 !text-red-700"}`}>
+                      {f.status === "VALIDATED" ? "Ready" : "Not orderable"}
+                    </span>
+                  </div>
+                  <p className="mt-6 text-sm text-brand-500">
+                    {f.items.length} active{f.items.length === 1 ? "" : "s"} · {fmtDate(f.created_at)}
+                  </p>
+                </Link>
+              </Reveal>
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      <div>
-        <h2 className="font-semibold text-brand-700 mb-3">Your orders</h2>
+      <section className="mt-16">
+        <h2 className="eyebrow mb-6">Your orders</h2>
         {loading ? (
-          <p className="text-sm text-brand-400">Loading...</p>
+          <p className="text-sm text-brand-400">Loading…</p>
         ) : orders.length === 0 ? (
-          <p className="text-sm text-brand-400">No orders yet.</p>
+          <div className="card text-sm text-brand-500">No orders yet.</div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-3">
-            {orders.map((o) => (
-              <Link key={o.id} href={`/orders/${o.id}`} className="card hover:shadow-md transition-shadow block">
-                <div className="flex justify-between items-start">
-                  <span className="font-mono text-sm text-brand-700">{o.order_code}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-brand-100 text-brand-700">{o.status}</span>
-                </div>
-                <p className="text-xs text-brand-400 mt-2">{new Date(o.created_at).toLocaleString()}</p>
-              </Link>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {orders.map((o, i) => (
+              <Reveal key={o.id} delay={Math.min(i, 5) * 80}>
+                <Link
+                  href={`/orders/${o.id}`}
+                  className="card block h-full transition duration-500 hover:-translate-y-1 hover:shadow-lift"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="font-mono text-sm tracking-wider text-brand-900">{o.order_code}</span>
+                    <span className="chip">{ORDER_STATUS_LABEL[o.status] ?? o.status}</span>
+                  </div>
+                  <p className="mt-6 text-sm text-brand-500">
+                    {codeById[o.formula_id] ?? "Personalized Serum"} · {fmtDate(o.created_at)}
+                  </p>
+                </Link>
+              </Reveal>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
