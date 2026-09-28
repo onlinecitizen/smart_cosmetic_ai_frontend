@@ -68,11 +68,7 @@ export default function LoginPage() {
         </Link>
       </p>
       <p className="mt-10 border-t border-brand-200 pt-5 text-xs leading-relaxed text-brand-400">
-        Demo admin login: <code>admin@example.com</code> / <code>ChangeMe123!</code> (development only —
-        change via ADMIN_EMAIL/ADMIN_PASSWORD before deploying anywhere real).
-        <br />
-        Demo customer with sample history: <code>demo@example.com</code> / <code>DemoCustomer123!</code>{" "}
-        (only when the backend runs with SEED_DEMO_DATA=true).
+        Demo customer with sample history: <code>demo@example.com</code> / <code>DemoCustomer123!</code>
       </p>
     </AuthShell>
   );
