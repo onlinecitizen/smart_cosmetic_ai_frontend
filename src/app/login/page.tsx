@@ -61,6 +61,9 @@ export default function LoginPage() {
       <p className="text-xs text-brand-400 mt-6 border-t border-brand-100 pt-4">
         Demo admin login: <code>admin@example.com</code> / <code>ChangeMe123!</code> (development only —
         change via ADMIN_EMAIL/ADMIN_PASSWORD before deploying anywhere real).
+        <br />
+        Demo customer with sample history: <code>demo@example.com</code> / <code>DemoCustomer123!</code>{" "}
+        (only when the backend runs with SEED_DEMO_DATA=true).
       </p>
     </div>
   );
