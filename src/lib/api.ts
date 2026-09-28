@@ -2,6 +2,15 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
+// CSRF token held in memory only (never localStorage). Set from the
+// login/register/me responses; needed because a cross-site frontend cannot
+// read the backend's CSRF cookie via document.cookie.
+let csrfTokenInMemory: string | null = null;
+
+export function setCsrfToken(token: string | null) {
+  csrfTokenInMemory = token;
+}
+
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
@@ -29,7 +38,7 @@ async function request<T>(
     headers["Content-Type"] = "application/json";
   }
   if (method !== "GET") {
-    const csrf = readCookie("cosmetic_csrf");
+    const csrf = csrfTokenInMemory || readCookie("cosmetic_csrf");
     if (csrf) headers["X-CSRF-Token"] = csrf;
   }
 
@@ -69,6 +78,7 @@ export interface User {
   full_name: string;
   role: "customer" | "admin";
   created_at: string;
+  csrf_token?: string;
 }
 
 export interface DiagnosticSession {

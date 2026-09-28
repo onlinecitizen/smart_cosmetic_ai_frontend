@@ -26,10 +26,14 @@ function AnalyzeContent() {
   const [climate, setClimate] = useState<ClimateSnapshot | null>(null);
   const [formula, setFormula] = useState<Formula | null>(null);
   const [busy, setBusy] = useState(false);
+  // Refs don't trigger re-renders, so track "camera is live" in state too;
+  // otherwise the Capture button never appears after the stream starts.
+  const [cameraOn, setCameraOn] = useState(false);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    setCameraOn(false);
   }, []);
 
   useEffect(() => stopCamera, [stopCamera]);
@@ -49,6 +53,7 @@ function AnalyzeContent() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
       streamRef.current = stream;
+      setCameraOn(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
@@ -206,12 +211,12 @@ function AnalyzeContent() {
             Center your face within the outline, in good lighting, and hold still.
           </p>
           <div className="flex gap-3 flex-wrap">
-            {!streamRef.current && (
+            {!cameraOn && (
               <button className="btn-primary" onClick={startCamera}>
                 Enable camera
               </button>
             )}
-            {streamRef.current && (
+            {cameraOn && (
               <button className="btn-primary" onClick={captureFrame}>
                 Capture photo
               </button>

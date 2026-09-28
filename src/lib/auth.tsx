@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { api, User } from "./api";
+import { api, setCsrfToken, User } from "./api";
 
 interface AuthContextValue {
   user: User | null;
@@ -21,8 +21,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const me = await api.get<User>("/api/v1/auth/me");
+      setCsrfToken(me.csrf_token ?? null);
       setUser(me);
     } catch {
+      setCsrfToken(null);
       setUser(null);
     } finally {
       setLoading(false);
@@ -35,18 +37,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const u = await api.post<User>("/api/v1/auth/login", { email, password });
+    setCsrfToken(u.csrf_token ?? null);
     setUser(u);
     return u;
   }, []);
 
   const register = useCallback(async (email: string, fullName: string, password: string) => {
     const u = await api.post<User>("/api/v1/auth/register", { email, full_name: fullName, password });
+    setCsrfToken(u.csrf_token ?? null);
     setUser(u);
     return u;
   }, []);
 
   const logout = useCallback(async () => {
     await api.post("/api/v1/auth/logout");
+    setCsrfToken(null);
     setUser(null);
   }, []);
 
