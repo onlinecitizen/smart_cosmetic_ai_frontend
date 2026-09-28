@@ -7,13 +7,15 @@ import { Reveal } from "@/components/Reveal";
 import { Bottle } from "@/components/Bottle";
 import { PageLoader } from "@/components/PageLoader";
 import { useAuth } from "@/lib/auth";
-import { batchVolume, useFormula } from "@/lib/useFormula";
-import { PRODUCT, UNIT_PRICE, firstName, formatPrice } from "@/lib/product";
+import { useFormula } from "@/lib/useFormula";
+import { useProduct } from "@/lib/useProduct";
+import { firstName, formatPrice } from "@/lib/product";
 
 function FormulaContent() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { formula, ingredients, error } = useFormula(id);
+  const { product } = useProduct();
 
   if (!formula) return <PageLoader message={error} />;
 
@@ -80,7 +82,7 @@ function FormulaContent() {
               <h2 className="display text-5xl">Your actives</h2>
             </div>
             <p className="text-sm text-brand-500">
-              In a base emulsion of {formula.base_emulsion_ml} mL · total batch {batchVolume(formula)} mL
+              In a base emulsion of {formula.base_emulsion_ml} mL · total batch {formula.batch_volume_ml} mL
             </p>
           </Reveal>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -90,7 +92,7 @@ function FormulaContent() {
                 <Reveal key={item.ingredient_id} delay={i * 120}>
                   <article className="h-full rounded-3xl border border-brand-200/70 bg-white/60 p-6 shadow-soft">
                     <span className="font-display text-sm italic text-gold-700">No. {String(i + 1).padStart(2, "0")}</span>
-                    <h3 className="display mt-8 text-2xl">{ing?.name ?? "Active ingredient"}</h3>
+                    <h3 className="display mt-8 text-2xl">{item.ingredient_name}</h3>
                     {ing?.description && <p className="mt-3 text-sm leading-relaxed text-brand-500">{ing.description}</p>}
                     <div className="mt-6 flex items-end justify-between border-t border-brand-200/70 pt-4">
                       <div>
@@ -130,23 +132,21 @@ function FormulaContent() {
             </div>
             <Reveal>
               <p className="eyebrow">The product</p>
-              <h2 className="display mt-4 text-5xl">{PRODUCT.name}</h2>
+              <h2 className="display mt-4 text-5xl">{product?.name ?? "Personalized Serum"}</h2>
               <p className="mt-2 text-brand-500">
-                {PRODUCT.sizeLabel} · <span className="font-mono text-sm">{formula.formula_code}</span>
+                {product?.size_label ?? ""} · <span className="font-mono text-sm">{formula.formula_code}</span>
               </p>
-              <p className="display mt-8 text-4xl">{formatPrice(UNIT_PRICE)}</p>
+              <p className="display mt-8 text-4xl">{product ? formatPrice(product.unit_price, product.currency) : "…"}</p>
               <dl className="mt-6 space-y-3 border-t border-brand-200 pt-6 text-sm">
-                <div className="flex justify-between text-brand-600">
-                  <dt>Personalized formulation</dt>
-                  <dd>{formatPrice(PRODUCT.formulationPrice)}</dd>
-                </div>
-                <div className="flex justify-between text-brand-600">
-                  <dt>Personalized packaging</dt>
-                  <dd>{formatPrice(PRODUCT.packagingPrice)}</dd>
-                </div>
+                {product?.price_breakdown.map((c) => (
+                  <div key={c.code} className="flex justify-between text-brand-600">
+                    <dt>{c.label}</dt>
+                    <dd>{formatPrice(c.amount, product.currency)}</dd>
+                  </div>
+                ))}
                 <div className="flex justify-between border-t border-brand-200 pt-3 font-semibold text-brand-900">
                   <dt>Total</dt>
-                  <dd>{formatPrice(UNIT_PRICE)}</dd>
+                  <dd>{product ? formatPrice(product.unit_price, product.currency) : "…"}</dd>
                 </div>
               </dl>
               <Link href={`/formula/${formula.id}/checkout`} className="btn-primary mt-10 w-full sm:w-auto">

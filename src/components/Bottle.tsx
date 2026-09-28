@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { PRODUCT } from "@/lib/product";
+import { BOTTLE_SIZE_LABEL } from "@/lib/product";
 import { useInView } from "./Reveal";
 
 /**
@@ -161,7 +161,7 @@ export function Bottle({
               </text>
             )}
             <text x="100" y="340" textAnchor="middle" fontSize="5.5" letterSpacing="1.2" fill="#8E7C64">
-              {PRODUCT.sizeLabel.toUpperCase()}
+              {BOTTLE_SIZE_LABEL.toUpperCase()}
             </text>
           </g>
           <text

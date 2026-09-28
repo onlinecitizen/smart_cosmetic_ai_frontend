@@ -112,6 +112,8 @@ export interface ClimateSnapshot {
 
 export interface FormulaIngredientLine {
   ingredient_id: string;
+  ingredient_code: string;
+  ingredient_name: string;
   volume_ml: number;
   percentage: number;
   max_allowed_percentage: number;
@@ -128,17 +130,53 @@ export interface Formula {
   validation_errors: string[];
   created_at: string;
   items: FormulaIngredientLine[];
+  batch_volume_ml: number;
+  climate: { provider: string; region: string; temperature_c: number; humidity: number; uv_index: number | null } | null;
+  diagnostic: {
+    provider: string;
+    model_version: string;
+    hydration: number;
+    redness: number;
+    pore_density: number;
+    barrier_index: number;
+    confidence: number;
+    created_at: string;
+  } | null;
+}
+
+export interface PriceComponent {
+  code: string;
+  label: string;
+  amount: number;
+}
+
+export interface Product {
+  code: string;
+  name: string;
+  size_label: string;
+  currency: string;
+  unit_price: number;
+  price_breakdown: PriceComponent[];
 }
 
 export interface Order {
   id: string;
   order_code: string;
   formula_id: string;
+  formula_code: string;
   status: string;
+  // Price snapshot stored by the server when the order was placed.
+  product_code: string | null;
+  product_name: string | null;
+  size_label: string | null;
+  quantity: number | null;
+  currency: string | null;
+  unit_price: number | null;
+  total_price: number | null;
+  price_breakdown: PriceComponent[] | null;
   created_at: string;
   updated_at: string;
-  // Present from backend versions that return order line items.
-  items?: { quantity: number; batch_volume_ml: number }[];
+  items: { quantity: number; batch_volume_ml: number }[];
 }
 
 export interface Ingredient {

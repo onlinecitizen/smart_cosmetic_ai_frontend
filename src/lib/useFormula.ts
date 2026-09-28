@@ -34,6 +34,3 @@ export function useFormula(formulaId: string | null | undefined): FormulaDetails
   return { formula, ingredients, error };
 }
 
-export function batchVolume(formula: Formula): number {
-  return Math.round((formula.base_emulsion_ml + formula.items.reduce((sum, i) => sum + i.volume_ml, 0)) * 10) / 10;
-}

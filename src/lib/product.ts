@@ -1,21 +1,14 @@
-// Display-only product/pricing configuration.
-//
-// The backend order model has no price fields and v1 takes no online
-// payment (see CLAUDE.md "PAYMENTS"), so pricing lives here in one place and
-// is shown to the customer as the published price. Change it here only.
-export const PRODUCT = {
-  name: "Personalized Serum",
-  sizeLabel: "30 mL",
-  currency: "TZS",
-  formulationPrice: 40_000,
-  packagingPrice: 5_000,
-  maxQuantity: 5,
-} as const;
+// Product names and prices come from the backend (GET /api/v1/products).
+// The server is the only place prices are set and order totals calculated;
+// this file only holds display helpers.
+export const PRODUCT_CODE = "PERSONALIZED_SERUM_30ML";
+export const MAX_QUANTITY = 5;
+// Printed on the decorative bottle illustration.
+export const BOTTLE_SIZE_LABEL = "30 mL";
 
-export const UNIT_PRICE = PRODUCT.formulationPrice + PRODUCT.packagingPrice;
-
-export function formatPrice(amount: number): string {
-  return `${PRODUCT.currency} ${amount.toLocaleString("en-US")}`;
+export function formatPrice(amount: number | null | undefined, currency: string | null | undefined): string {
+  if (amount == null || !currency) return "—";
+  return `${currency} ${amount.toLocaleString("en-US")}`;
 }
 
 export function firstName(fullName: string | undefined | null): string {

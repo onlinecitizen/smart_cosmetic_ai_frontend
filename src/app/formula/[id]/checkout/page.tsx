@@ -9,13 +9,15 @@ import { PageLoader } from "@/components/PageLoader";
 import { api, Order } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useFormula } from "@/lib/useFormula";
-import { PRODUCT, UNIT_PRICE, firstName, formatPrice } from "@/lib/product";
+import { MAX_QUANTITY, PRODUCT_CODE, firstName, formatPrice } from "@/lib/product";
+import { useProduct } from "@/lib/useProduct";
 
 function CheckoutContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const { formula, error: loadError } = useFormula(id);
+  const { product, failed: productFailed } = useProduct();
   const [quantity, setQuantity] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,8 @@ function CheckoutContent() {
     setError(null);
     let order: Order;
     try {
-      order = await api.post<Order>("/api/v1/orders", { formula_id: formula.id, quantity });
+      // Only the product and quantity are sent; the server calculates the price.
+      order = await api.post<Order>("/api/v1/orders", { formula_id: formula.id, quantity, product_code: PRODUCT_CODE });
     } catch {
       setError("We couldn’t place your order. Please try again.");
       setBusy(false);
@@ -71,9 +74,9 @@ function CheckoutContent() {
             </div>
             <div className="flex-1">
               <p className="eyebrow">Product</p>
-              <h2 className="display mt-2 text-3xl">{PRODUCT.name}</h2>
+              <h2 className="display mt-2 text-3xl">{product?.name ?? "Personalized Serum"}</h2>
               <p className="mt-1 text-sm text-brand-500">
-                {PRODUCT.sizeLabel} · <span className="font-mono">{formula.formula_code}</span>
+                {product?.size_label ?? ""} · <span className="font-mono">{formula.formula_code}</span>
                 {name && ` · labelled for ${name}`}
               </p>
             </div>
@@ -93,8 +96,8 @@ function CheckoutContent() {
                 </span>
                 <button
                   className="grid h-10 w-10 place-items-center text-lg text-brand-700 disabled:opacity-30"
-                  onClick={() => setQuantity((q) => Math.min(PRODUCT.maxQuantity, q + 1))}
-                  disabled={quantity >= PRODUCT.maxQuantity || busy}
+                  onClick={() => setQuantity((q) => Math.min(MAX_QUANTITY, q + 1))}
+                  disabled={quantity >= MAX_QUANTITY || busy}
                   aria-label="Increase quantity"
                 >
                   +
@@ -115,24 +118,31 @@ function CheckoutContent() {
         <aside className="glass h-fit p-8">
           <p className="eyebrow">Order summary</p>
           <dl className="mt-6 space-y-3 text-sm">
-            <div className="flex justify-between text-brand-600">
-              <dt>Personalized formulation × {quantity}</dt>
-              <dd>{formatPrice(PRODUCT.formulationPrice * quantity)}</dd>
-            </div>
-            <div className="flex justify-between text-brand-600">
-              <dt>Personalized packaging × {quantity}</dt>
-              <dd>{formatPrice(PRODUCT.packagingPrice * quantity)}</dd>
-            </div>
+            {product?.price_breakdown.map((c) => (
+              <div key={c.code} className="flex justify-between text-brand-600">
+                <dt>
+                  {c.label} × {quantity}
+                </dt>
+                <dd>{formatPrice(c.amount * quantity, product.currency)}</dd>
+              </div>
+            ))}
             <div className="flex items-baseline justify-between border-t border-brand-200 pt-4">
               <dt className="font-semibold text-brand-900">Total</dt>
-              <dd className="display text-3xl">{formatPrice(UNIT_PRICE * quantity)}</dd>
+              <dd className="display text-3xl">
+                {product ? formatPrice(product.unit_price * quantity, product.currency) : "…"}
+              </dd>
             </div>
           </dl>
           {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
           <button className="btn-primary mt-8 w-full" onClick={placeOrder} disabled={busy}>
             {busy ? "Placing your order..." : "Order my personalized formula"}
           </button>
-          <p className="mt-4 text-center text-xs text-brand-400">No payment is taken online.</p>
+          {productFailed && (
+            <p className="mt-4 text-sm text-brand-600">Prices couldn’t be loaded — your total will be confirmed on the next page.</p>
+          )}
+          <p className="mt-4 text-center text-xs text-brand-400">
+            Your total is calculated and confirmed when the order is placed. No payment is taken online.
+          </p>
         </aside>
       </div>
     </div>

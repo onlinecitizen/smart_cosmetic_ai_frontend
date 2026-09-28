@@ -394,7 +394,7 @@ function AnalyzeContent() {
               </div>
               <p className="mt-4 text-sm text-brand-500">
                 Your environment is considered when building your personalized formula.
-                {climate.provider === "mock" && <span className="text-brand-400"> Demo climate service.</span>}
+                {climate.provider.startsWith("mock") && <span className="text-brand-400"> Demo climate service.</span>}
               </p>
             </section>
           )}

@@ -9,8 +9,7 @@ import { Bottle } from "@/components/Bottle";
 import { PageLoader } from "@/components/PageLoader";
 import { api, Order } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useFormula } from "@/lib/useFormula";
-import { ORDER_STATUS_LABEL, ORDER_TIMELINE, PRODUCT, UNIT_PRICE, firstName, formatPrice } from "@/lib/product";
+import { ORDER_STATUS_LABEL, ORDER_TIMELINE, firstName, formatPrice } from "@/lib/product";
 
 function headlineFor(status: string): { eyebrow: string; title: string; body: string } {
   if (status === "DRAFT")
@@ -43,7 +42,6 @@ function OrderContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { formula } = useFormula(order?.formula_id);
 
   const load = useCallback(() => {
     api
@@ -82,7 +80,6 @@ function OrderContent() {
 
   if (!order) return <PageLoader message={loadError} />;
 
-  const quantity = order.items?.[0]?.quantity ?? 1;
   const headline = headlineFor(order.status);
   const isTerminal = ["CANCELLED", "FAILED"].includes(order.status);
   const timelineIndex = ORDER_TIMELINE.indexOf(order.status);
@@ -97,7 +94,7 @@ function OrderContent() {
         />
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-[1fr_1.3fr] md:py-24">
           <div className="mx-auto h-[360px] w-[210px] sm:h-[440px] sm:w-[250px]">
-            <Bottle name={name} code={formula?.formula_code} className="h-full w-full" />
+            <Bottle name={name} code={order.formula_code} className="h-full w-full" />
           </div>
           <div className="text-center md:text-left">
             <Reveal>
@@ -116,10 +113,11 @@ function OrderContent() {
             <dl className="mt-6 space-y-4 text-sm">
               {[
                 ["Order number", <span key="o" className="font-mono">{order.order_code}</span>],
-                ["Formula code", <span key="f" className="font-mono">{formula?.formula_code ?? "…"}</span>],
-                ["Product", `${PRODUCT.name} · ${PRODUCT.sizeLabel}`],
-                ["Quantity", quantity],
-                ["Price", formatPrice(UNIT_PRICE * quantity)],
+                ["Formula code", <span key="f" className="font-mono">{order.formula_code}</span>],
+                ["Product", [order.product_name, order.size_label].filter(Boolean).join(" · ") || "—"],
+                ["Quantity", order.quantity ?? "—"],
+                ["Unit price", formatPrice(order.unit_price, order.currency)],
+                ["Total", formatPrice(order.total_price, order.currency)],
                 ["Status", ORDER_STATUS_LABEL[order.status] ?? order.status],
                 ["Placed", new Date(order.created_at).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })],
               ].map(([k, v]) => (
