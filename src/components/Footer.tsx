@@ -17,10 +17,16 @@ export function Footer() {
             How it works
           </Link>
           <Link href="/#product" className="block text-brand-600 hover:text-brand-900">
-            Product
+            Serum
           </Link>
           <Link href="/#transparency" className="block text-brand-600 hover:text-brand-900">
             Transparency
+          </Link>
+          <Link href="/products" className="block text-brand-600 hover:text-brand-900">
+            Partner products
+          </Link>
+          <Link href="/recommendations" className="block text-brand-600 hover:text-brand-900">
+            Find products for my skin
           </Link>
         </div>
         <div className="space-y-3 text-sm">

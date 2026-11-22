@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AssessmentLink } from "@/components/Navbar";
 import { Reveal } from "@/components/Reveal";
 import { PersonalBottle } from "@/components/home/PersonalBottle";
@@ -110,6 +111,28 @@ export default function HomePage() {
         </Reveal>
         <div className="max-w-3xl">
           <ProductCard />
+        </div>
+      </section>
+
+      {/* ================= PARTNER PRODUCTS ================= */}
+      <section id="partner-products" className="scroll-mt-20 border-y border-brand-200/70 bg-white/40">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 md:grid-cols-[1.2fr_1fr] md:items-center md:py-24">
+          <div>
+            <p className="eyebrow mb-4">Partner products</p>
+            <h2 className="display text-4xl sm:text-5xl">Prefer a ready-made product?</h2>
+            <p className="mt-4 max-w-lg text-sm leading-relaxed text-brand-600 sm:text-base">
+              Tell us your skin type, what you’d like help with and any ingredients to avoid. We match your answers
+              against reviewed listings from partner retailers and explain every result.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
+            <Link href="/recommendations" className="btn-primary">
+              Find products for my skin
+            </Link>
+            <Link href="/products" className="btn-secondary">
+              Browse partner products
+            </Link>
+          </div>
         </div>
       </section>
 

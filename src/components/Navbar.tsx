@@ -7,8 +7,8 @@ import { useAuth } from "@/lib/auth";
 
 const SECTIONS = [
   { href: "/#how", label: "How It Works" },
-  { href: "/#product", label: "Product" },
-  { href: "/#ingredients", label: "Ingredients" },
+  { href: "/#product", label: "Serum" },
+  { href: "/products", label: "Partner Products" },
   { href: "/#transparency", label: "Transparency" },
 ];
 
@@ -82,7 +82,12 @@ export function Navbar() {
 
         <nav className="hidden items-center gap-8 lg:flex" aria-label="Main">
           {SECTIONS.map((s) => (
-            <Link key={s.href} href={s.href} className="text-[13px] text-brand-600 transition hover:text-brand-900">
+            <Link
+              key={s.href}
+              href={s.href}
+              aria-current={pathname.startsWith("/products") && s.href === "/products" ? "page" : undefined}
+              className="text-[13px] text-brand-600 transition hover:text-brand-900"
+            >
               {s.label}
             </Link>
           ))}

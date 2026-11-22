@@ -16,6 +16,10 @@ const UNSUPPORTED_CLAIMS: [RegExp, string][] = [
   [/updates automatically/i, "order pages do not poll for status"],
   [/["'`>]\s*Confirmed\b/, "submitted orders are never reviewed, so they are not confirmed"],
   [/clinically|dermatologist[- ]approved|guaranteed results/i, "no clinical evidence exists"],
+  // Phase 2 (partner catalogue): products carry retailer "listed for" tags, not efficacy evidence.
+  [/\b(treats|cures|heals)\b/i, "catalogue tags are listing labels, not efficacy claims"],
+  [/safe for (all|everyone|every|sensitive)/i, "missing ingredient data is unknown; nothing is labelled safe for everyone"],
+  [/AI[- ](recommend|match|pick)/i, "product matching uses fixed rules (rules-v1), not an AI model"],
 ];
 
 function sourceFiles(dir: string): string[] {

@@ -64,6 +64,11 @@ export function transparencyItems(): TransparencyItem[] {
       kind: "fact",
     },
     {
+      title: "Partner products",
+      body: "Partner listings are reviewed before they appear. Product matches use fixed rules, not an AI model, and ingredient checks compare listed ingredient names, so always check the label.",
+      kind: "fact",
+    },
+    {
       title: "Not medical advice",
       body: "This is cosmetic personalization. It does not diagnose skin conditions or replace a dermatologist.",
       kind: "fact",

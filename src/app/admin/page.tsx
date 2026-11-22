@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Alert } from "@/components/ui/States";
 import { api, errorMessage, Formula, FormulationRule, Ingredient, Order, User } from "@/lib/api";
+import { AdminCatalogProduct } from "@/lib/catalog";
 
-type Tab = "customers" | "formulas" | "ingredients" | "rules" | "orders" | "lab" | "audit";
+type Tab = "customers" | "formulas" | "ingredients" | "rules" | "orders" | "catalog" | "lab" | "audit";
 
 interface LabDispatchRow {
   id: string;
@@ -41,6 +42,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "ingredients", label: "Ingredients" },
   { key: "rules", label: "Formulation Rules" },
   { key: "orders", label: "Orders" },
+  { key: "catalog", label: "Catalogue" },
   { key: "lab", label: "Lab Events" },
   { key: "audit", label: "Audit Log" },
 ];
@@ -55,6 +57,7 @@ function AdminContent() {
   const [dispatches, setDispatches] = useState<LabDispatchRow[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookEventRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [catalog, setCatalog] = useState<AdminCatalogProduct[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   // Previously every load/action failure was silent (unhandled promise).
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
@@ -70,6 +73,7 @@ function AdminContent() {
       ["lab dispatches", api.get<LabDispatchRow[]>("/api/v1/admin/lab-dispatches").then(setDispatches)],
       ["webhook events", api.get<WebhookEventRow[]>("/api/v1/admin/webhook-events").then(setWebhooks)],
       ["audit log", api.get<AuditRow[]>("/api/v1/audit").then(setAudit)],
+      ["catalogue", api.get<AdminCatalogProduct[]>("/api/v1/admin/catalog/products").then(setCatalog)],
     ];
     Promise.allSettled(loads.map(([, p]) => p)).then((results) =>
       setLoadErrors(results.flatMap((r, i) => (r.status === "rejected" ? [loads[i][0]] : [])))
@@ -93,6 +97,10 @@ function AdminContent() {
 
   const approveRule = (id: string) => runAction(id, `/api/v1/formulation-rules/${id}/approve`, "Could not approve the rule.");
   const disableRule = (id: string) => runAction(id, `/api/v1/formulation-rules/${id}/disable`, "Could not disable the rule.");
+  const publishProduct = (id: string) =>
+    runAction(id, `/api/v1/admin/catalog/products/${id}/publish`, "Could not publish the product.");
+  const archiveProduct = (id: string) =>
+    runAction(id, `/api/v1/admin/catalog/products/${id}/archive`, "Could not archive the product.");
   const dispatchToLab = (orderId: string) =>
     runAction(orderId, `/api/v1/lab/dispatch/${orderId}`, "Could not dispatch the order to the lab.");
 
@@ -277,6 +285,67 @@ function AdminContent() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === "catalog" && (
+        <div className="space-y-3">
+          <p className="text-sm text-brand-600">
+            Publish a product only after checking its details against the real label or partner data. Publishing
+            records you as the reviewer. Editing a published product returns it to draft. Bulk import:{" "}
+            <code>python -m app.catalog.importer file.csv --retailer &quot;Name&quot;</code> (backend).
+          </p>
+          <div className="card overflow-x-auto">
+            {catalog.length === 0 ? (
+              <p className="text-sm text-brand-600">No catalogue products yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-brand-500 border-b border-brand-100">
+                    <th className="py-2 pr-4">Product</th>
+                    <th className="py-2 pr-4">Retailer</th>
+                    <th className="py-2 pr-4">Ingredients</th>
+                    <th className="py-2 pr-4">Status</th>
+                    <th className="py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {catalog.map((p) => (
+                    <tr key={p.id} className="border-b border-brand-50 align-top">
+                      <td className="py-2 pr-4">
+                        {p.name}
+                        <span className="block font-mono text-xs text-brand-500">{p.sku}</span>
+                        {p.is_test_fixture && <span className="text-xs text-amber-800">test fixture</span>}
+                      </td>
+                      <td className="py-2 pr-4">{p.retailer.name}</td>
+                      <td className="py-2 pr-4">{p.ingredients_inci ? "Listed" : <span className="text-amber-800">Not provided</span>}</td>
+                      <td className="py-2 pr-4">{p.status}</td>
+                      <td className="py-2 space-x-3 whitespace-nowrap">
+                        {p.status !== "PUBLISHED" && (
+                          <button
+                            className="text-brand-700 underline text-xs"
+                            disabled={busyId === p.id}
+                            onClick={() => publishProduct(p.id)}
+                          >
+                            Publish (details checked)
+                          </button>
+                        )}
+                        {p.status !== "ARCHIVED" && (
+                          <button
+                            className="text-red-700 underline text-xs"
+                            disabled={busyId === p.id}
+                            onClick={() => archiveProduct(p.id)}
+                          >
+                            Archive
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
