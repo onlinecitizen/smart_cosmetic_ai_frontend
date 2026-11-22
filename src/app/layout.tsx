@@ -20,8 +20,9 @@ const sans = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Smart Cosmetic AI — Your Skin. Your Climate. Your Formula.",
-  description: "AI-powered personalized cosmetics designed around your skin profile and environment.",
+  title: "Smart Cosmetic AI — Your Skin Profile. Your Formula.",
+  description:
+    "Take one photo, see your skin scores and get a personalized serum formula with every ingredient and amount explained. Cosmetic personalization, not a medical diagnosis.",
 };
 
 export const viewport: Viewport = {
@@ -32,9 +33,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body className="flex min-h-screen flex-col">
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         <AuthProvider>
           <Navbar />
-          <main className="flex-1">{children}</main>
+          <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
+            {children}
+          </main>
           <Footer />
         </AuthProvider>
       </body>

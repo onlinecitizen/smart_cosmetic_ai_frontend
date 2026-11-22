@@ -61,14 +61,17 @@ export function ScoreRing({
           </defs>
         </svg>
         <div className="absolute inset-0 grid place-items-center">
-          <span className="display text-3xl sm:text-4xl">
+          <span className="display text-3xl sm:text-4xl" aria-hidden>
             {shown}
-            <span className="text-base text-brand-400">%</span>
+            <span className="text-sm text-brand-500">/100</span>
+          </span>
+          <span className="sr-only">
+            {label}: {target} out of 100
           </span>
         </div>
       </div>
       <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-900">{label}</p>
-      <p className="mt-1 max-w-[12rem] text-xs leading-relaxed text-brand-400">{helpText}</p>
+      <p className="mt-1 max-w-[12rem] text-xs leading-relaxed text-brand-500">{helpText}</p>
     </div>
   );
 }

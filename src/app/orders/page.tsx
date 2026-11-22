@@ -1,50 +1,64 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
-import { api, Order } from "@/lib/api";
-import { ORDER_STATUS_LABEL } from "@/lib/product";
+import { EmptyState, ErrorState, Spinner, StatusBadge } from "@/components/ui/States";
+import { api, errorMessage, Order } from "@/lib/api";
+import { orderStatusInfo } from "@/lib/orderStatus";
+import { formatPrice } from "@/lib/product";
 
 function OrdersContent() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setError(null);
+    setOrders(null);
     api
       .get<Order[]>("/api/v1/orders")
       .then(setOrders)
-      .catch(() => undefined)
-      .finally(() => setLoading(false));
+      .catch((err) => setError(errorMessage(err, "We couldn’t load your orders.")));
   }, []);
+
+  useEffect(load, [load]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-24 pt-10 sm:px-6">
       <p className="eyebrow">Your account</p>
-      <h1 className="display mt-4 text-5xl">Orders</h1>
+      <h1 className="display mt-4 text-4xl sm:text-5xl">Orders</h1>
       <div className="mt-10">
-        {loading ? (
-          <p className="text-sm text-brand-400">Loading…</p>
+        {error ? (
+          <ErrorState message={error} onRetry={load} />
+        ) : orders === null ? (
+          <Spinner label="Loading your orders" />
         ) : orders.length === 0 ? (
-          <div className="card space-y-4 text-sm text-brand-500">
-            <p>No orders yet.</p>
-            <Link href="/analyze" className="btn-primary">
-              Start an assessment
-            </Link>
-          </div>
+          <EmptyState
+            title="No orders yet"
+            body="Orders appear here after you review a formula and send an order request."
+            action={{ href: "/analyze", label: "Start an assessment" }}
+          />
         ) : (
           <ul className="divide-y divide-brand-200/70 border-y border-brand-200/70">
-            {orders.map((o) => (
-              <li key={o.id}>
-                <Link href={`/orders/${o.id}`} className="flex items-center justify-between gap-4 py-5 transition hover:bg-white/50">
-                  <div>
-                    <p className="font-mono tracking-wider text-brand-900">{o.order_code}</p>
-                    <p className="mt-1 text-xs text-brand-400">{new Date(o.created_at).toLocaleDateString()}</p>
-                  </div>
-                  <span className="chip">{ORDER_STATUS_LABEL[o.status] ?? o.status}</span>
-                </Link>
-              </li>
-            ))}
+            {orders.map((o) => {
+              const info = orderStatusInfo(o.status);
+              return (
+                <li key={o.id}>
+                  <Link
+                    href={`/orders/${o.id}`}
+                    className="flex flex-col gap-3 py-5 transition hover:bg-white/50 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-mono tracking-wider text-brand-900">{o.order_code}</p>
+                      <p className="mt-1 text-sm text-brand-500">
+                        {new Date(o.created_at).toLocaleDateString()} · {formatPrice(o.total_price, o.currency)}
+                      </p>
+                    </div>
+                    <StatusBadge label={info.label} tone={info.tone} />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

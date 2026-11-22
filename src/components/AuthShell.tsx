@@ -1,11 +1,6 @@
 import { Bottle } from "./Bottle";
 
-/** Read a same-site `?next=` path, rejecting anything that could leave the app. */
-export function safeNextPath(): string | null {
-  if (typeof window === "undefined") return null;
-  const next = new URLSearchParams(window.location.search).get("next");
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : null;
-}
+export { safeNextPath } from "@/lib/safeNext";
 
 export function AuthShell({
   eyebrow,

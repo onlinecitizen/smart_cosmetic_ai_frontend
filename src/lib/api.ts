@@ -64,6 +64,20 @@ async function request<T>(
   return data as T;
 }
 
+/** A user-facing sentence for a failed request. Never shows raw server text. */
+export function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    if (err.status === 401) return "Your session has expired. Please log in again.";
+    if (err.status === 403) return "We couldn’t verify your session. Please refresh the page and try again.";
+    if (err.status === 404) return "We couldn’t find that. It may have been removed.";
+    if (err.status === 0 || err.status >= 500) return "Our server is having trouble right now. Please try again shortly.";
+  } else if (err instanceof TypeError) {
+    // fetch() rejects with a TypeError when the network is unreachable.
+    return "We couldn’t reach the server. Check your connection and try again.";
+  }
+  return fallback;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
@@ -125,7 +139,8 @@ export interface Formula {
   base_emulsion_ml: number;
   formula_version: number;
   status: "GENERATED" | "VALIDATED" | "INVALID";
-  rules_used: { rule_code: string; ingredient_code: string }[];
+  // Snapshot written by the backend engine (app/formulation.py `rules_used`).
+  rules_used: { rule_id?: string; rule_code: string; rule_version?: number; ingredient_code: string }[];
   diagnostic_model_version: string;
   validation_errors: string[];
   created_at: string;

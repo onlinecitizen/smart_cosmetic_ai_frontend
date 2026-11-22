@@ -4,8 +4,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { ApiError } from "@/lib/api";
+import { ApiError, errorMessage } from "@/lib/api";
 import { AuthShell, safeNextPath } from "@/components/AuthShell";
+import { Alert } from "@/components/ui/States";
+import { PasswordField } from "@/components/ui/PasswordField";
+
+/** Maps backend register errors (app/routers/auth.py, app/schemas.py) to plain language. */
+function registerError(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 409) return "An account with this email already exists. Try logging in instead.";
+    if (err.status === 422)
+      return "Please check your details: use a valid email address and a password of 8 to 128 characters.";
+  }
+  return errorMessage(err, "Something went wrong. Please try again.");
+}
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -24,8 +36,7 @@ export default function RegisterPage() {
       await register(email, fullName, password);
       router.push(safeNextPath() ?? "/dashboard");
     } catch (err) {
-      if (err instanceof ApiError) setError(typeof err.detail === "string" ? err.detail : "Please check your details.");
-      else setError("Something went wrong. Please try again.");
+      setError(registerError(err));
     } finally {
       setSubmitting(false);
     }
@@ -42,36 +53,55 @@ export default function RegisterPage() {
           <label className="label" htmlFor="name">
             Full name
           </label>
-          <input id="name" className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-          <p className="mt-1.5 text-xs text-brand-400">Your first name appears on your bottle.</p>
+          <input
+            id="name"
+            className="input"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            autoComplete="name"
+            aria-describedby="name-hint"
+            maxLength={255}
+            required
+          />
+          <p id="name-hint" className="mt-1.5 text-xs text-brand-500">
+            Your first name is shown on your formula pages.
+          </p>
         </div>
         <div>
           <label className="label" htmlFor="email">
             Email
           </label>
-          <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </div>
-        <div>
-          <label className="label" htmlFor="password">
-            Password
-          </label>
           <input
-            id="password"
-            type="password"
+            id="email"
+            type="email"
             className="input"
-            value={password}
-            minLength={8}
-            onChange={(e) => setPassword(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            inputMode="email"
+            aria-describedby={error ? "register-error" : undefined}
             required
           />
-          <p className="mt-1.5 text-xs text-brand-400">At least 8 characters.</p>
         </div>
-        {error && <p className="text-sm text-red-700">{error}</p>}
+        <PasswordField
+          id="password"
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+          hint="At least 8 characters."
+          minLength={8}
+          describedBy={error ? "register-error" : undefined}
+        />
+        {error && (
+          <div id="register-error">
+            <Alert tone="error">{error}</Alert>
+          </div>
+        )}
         <button type="submit" className="btn-primary w-full" disabled={submitting}>
           {submitting ? "Creating account..." : "Create account"}
         </button>
       </form>
-      <p className="mt-6 text-sm text-brand-500">
+      <p className="mt-6 text-sm text-brand-600">
         Already have an account?{" "}
         <Link href={loginHref} className="text-brand-900 underline underline-offset-4">
           Log in

@@ -1,13 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, Product } from "./api";
 import { PRODUCT_CODE } from "./product";
 
 /** Server-side product + price (public endpoint, no sign-in needed). */
-export function useProduct(code: string = PRODUCT_CODE): { product: Product | null; failed: boolean } {
+export function useProduct(code: string = PRODUCT_CODE): {
+  product: Product | null;
+  failed: boolean;
+  reload: () => void;
+} {
   const [product, setProduct] = useState<Product | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  const reload = useCallback(() => {
+    setFailed(false);
+    setAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -18,7 +28,7 @@ export function useProduct(code: string = PRODUCT_CODE): { product: Product | nu
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, attempt]);
 
-  return { product, failed };
+  return { product, failed, reload };
 }

@@ -6,7 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Bottle } from "@/components/Bottle";
 import { PageLoader } from "@/components/PageLoader";
-import { api, Order } from "@/lib/api";
+import { Alert } from "@/components/ui/States";
+import { api, errorMessage, Order } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useFormula } from "@/lib/useFormula";
 import { MAX_QUANTITY, PRODUCT_CODE, firstName, formatPrice } from "@/lib/product";
@@ -16,13 +17,13 @@ function CheckoutContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const { formula, error: loadError } = useFormula(id);
+  const { formula, error: loadError, reload } = useFormula(id);
   const { product, failed: productFailed } = useProduct();
   const [quantity, setQuantity] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!formula) return <PageLoader message={loadError} />;
+  if (!formula) return <PageLoader message={loadError} onRetry={reload} />;
 
   if (formula.status !== "VALIDATED") {
     return (
@@ -43,13 +44,13 @@ function CheckoutContent() {
     try {
       // Only the product and quantity are sent; the server calculates the price.
       order = await api.post<Order>("/api/v1/orders", { formula_id: formula.id, quantity, product_code: PRODUCT_CODE });
-    } catch {
-      setError("We couldn’t place your order. Please try again.");
+    } catch (err) {
+      setError(errorMessage(err, "We couldn’t place your order request. Please try again."));
       setBusy(false);
       return;
     }
     try {
-      // Orders are created as drafts; submitting confirms them.
+      // Orders are created as drafts; submitting sends the request.
       await api.post<Order>(`/api/v1/orders/${order.id}/submit`);
     } catch {
       // The draft exists; the order page offers to submit it again.
@@ -64,7 +65,7 @@ function CheckoutContent() {
       <Link href={`/formula/${formula.id}`} className="text-xs uppercase tracking-[0.2em] text-brand-500 hover:text-brand-900">
         ← Back to formula
       </Link>
-      <h1 className="display mt-6 text-5xl">Your order</h1>
+      <h1 className="display mt-6 text-4xl sm:text-5xl">Your order request</h1>
 
       <div className="mt-12 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
@@ -77,14 +78,15 @@ function CheckoutContent() {
               <h2 className="display mt-2 text-3xl">{product?.name ?? "Personalized Serum"}</h2>
               <p className="mt-1 text-sm text-brand-500">
                 {product?.size_label ?? ""} · <span className="font-mono">{formula.formula_code}</span>
-                {name && ` · labelled for ${name}`}
               </p>
             </div>
-            <div>
-              <p className="label">Quantity</p>
-              <div className="flex items-center rounded-full border border-brand-200 bg-white">
+            <div role="group" aria-labelledby="qty-label">
+              <p id="qty-label" className="label">
+                Quantity
+              </p>
+              <div className="flex w-fit items-center rounded-full border border-brand-200 bg-white">
                 <button
-                  className="grid h-10 w-10 place-items-center text-lg text-brand-700 disabled:opacity-30"
+                  className="grid h-11 w-11 place-items-center text-lg text-brand-700 disabled:opacity-30"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   disabled={quantity <= 1 || busy}
                   aria-label="Decrease quantity"
@@ -95,7 +97,7 @@ function CheckoutContent() {
                   {quantity}
                 </span>
                 <button
-                  className="grid h-10 w-10 place-items-center text-lg text-brand-700 disabled:opacity-30"
+                  className="grid h-11 w-11 place-items-center text-lg text-brand-700 disabled:opacity-30"
                   onClick={() => setQuantity((q) => Math.min(MAX_QUANTITY, q + 1))}
                   disabled={quantity >= MAX_QUANTITY || busy}
                   aria-label="Increase quantity"
@@ -107,11 +109,14 @@ function CheckoutContent() {
           </div>
 
           <div className="card">
-            <p className="eyebrow">Delivery</p>
-            <p className="mt-3 text-sm leading-relaxed text-brand-600">
-              Delivery is arranged after your serum has been made. Order updates are linked to your account,{" "}
-              <strong>{user?.email}</strong>.
-            </p>
+            <h2 className="eyebrow">What happens next</h2>
+            <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-brand-600">
+              <li>Your order request is recorded and linked to your account ({user?.email}).</li>
+              <li>Its status is shown on your order page and updated as it moves through preparation.</li>
+              <li>
+                No payment is taken online. We don’t collect a delivery address or phone number on the website yet.
+              </li>
+            </ol>
           </div>
         </div>
 
@@ -133,15 +138,21 @@ function CheckoutContent() {
               </dd>
             </div>
           </dl>
-          {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+          {error && (
+            <Alert tone="error" className="mt-4">
+              {error}
+            </Alert>
+          )}
           <button className="btn-primary mt-8 w-full" onClick={placeOrder} disabled={busy}>
-            {busy ? "Placing your order..." : "Order my personalized formula"}
+            {busy ? "Sending your request..." : "Send order request"}
           </button>
           {productFailed && (
-            <p className="mt-4 text-sm text-brand-600">Prices couldn’t be loaded — your total will be confirmed on the next page.</p>
+            <Alert tone="warning" className="mt-4">
+              Prices couldn’t be loaded. Your total is calculated by our server and shown on the next page.
+            </Alert>
           )}
-          <p className="mt-4 text-center text-xs text-brand-400">
-            Your total is calculated and confirmed when the order is placed. No payment is taken online.
+          <p className="mt-4 text-center text-xs text-brand-500">
+            Your total is calculated by our server when the request is sent. No payment is taken online.
           </p>
         </aside>
       </div>

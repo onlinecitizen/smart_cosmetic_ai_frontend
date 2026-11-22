@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
-import { api, Formula, FormulationRule, Ingredient, Order, User } from "@/lib/api";
+import { Alert } from "@/components/ui/States";
+import { api, errorMessage, Formula, FormulationRule, Ingredient, Order, User } from "@/lib/api";
 
 type Tab = "customers" | "formulas" | "ingredients" | "rules" | "orders" | "lab" | "audit";
 
@@ -55,59 +56,66 @@ function AdminContent() {
   const [webhooks, setWebhooks] = useState<WebhookEventRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Previously every load/action failure was silent (unhandled promise).
+  const [loadErrors, setLoadErrors] = useState<string[]>([]);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   function reload() {
-    api.get<User[]>("/api/v1/admin/customers").then(setCustomers);
-    api.get<Formula[]>("/api/v1/admin/formulas").then(setFormulas);
-    api.get<Ingredient[]>("/api/v1/ingredients").then(setIngredients);
-    api.get<FormulationRule[]>("/api/v1/formulation-rules").then(setRules);
-    api.get<Order[]>("/api/v1/admin/orders").then(setOrders);
-    api.get<LabDispatchRow[]>("/api/v1/admin/lab-dispatches").then(setDispatches);
-    api.get<WebhookEventRow[]>("/api/v1/admin/webhook-events").then(setWebhooks);
-    api.get<AuditRow[]>("/api/v1/audit").then(setAudit);
+    const loads: [string, Promise<unknown>][] = [
+      ["customers", api.get<User[]>("/api/v1/admin/customers").then(setCustomers)],
+      ["formulas", api.get<Formula[]>("/api/v1/admin/formulas").then(setFormulas)],
+      ["ingredients", api.get<Ingredient[]>("/api/v1/ingredients").then(setIngredients)],
+      ["formulation rules", api.get<FormulationRule[]>("/api/v1/formulation-rules").then(setRules)],
+      ["orders", api.get<Order[]>("/api/v1/admin/orders").then(setOrders)],
+      ["lab dispatches", api.get<LabDispatchRow[]>("/api/v1/admin/lab-dispatches").then(setDispatches)],
+      ["webhook events", api.get<WebhookEventRow[]>("/api/v1/admin/webhook-events").then(setWebhooks)],
+      ["audit log", api.get<AuditRow[]>("/api/v1/audit").then(setAudit)],
+    ];
+    Promise.allSettled(loads.map(([, p]) => p)).then((results) =>
+      setLoadErrors(results.flatMap((r, i) => (r.status === "rejected" ? [loads[i][0]] : [])))
+    );
   }
 
   useEffect(reload, []);
 
-  async function approveRule(id: string) {
+  async function runAction(id: string, path: string, failure: string) {
     setBusyId(id);
+    setActionError(null);
     try {
-      await api.post(`/api/v1/formulation-rules/${id}/approve`);
+      await api.post(path);
       reload();
+    } catch (err) {
+      setActionError(errorMessage(err, failure));
     } finally {
       setBusyId(null);
     }
   }
 
-  async function disableRule(id: string) {
-    setBusyId(id);
-    try {
-      await api.post(`/api/v1/formulation-rules/${id}/disable`);
-      reload();
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function dispatchToLab(orderId: string) {
-    setBusyId(orderId);
-    try {
-      await api.post(`/api/v1/lab/dispatch/${orderId}`);
-      reload();
-    } finally {
-      setBusyId(null);
-    }
-  }
+  const approveRule = (id: string) => runAction(id, `/api/v1/formulation-rules/${id}/approve`, "Could not approve the rule.");
+  const disableRule = (id: string) => runAction(id, `/api/v1/formulation-rules/${id}/disable`, "Could not disable the rule.");
+  const dispatchToLab = (orderId: string) =>
+    runAction(orderId, `/api/v1/lab/dispatch/${orderId}`, "Could not dispatch the order to the lab.");
 
   return (
     <div className="container-page space-y-6">
       <h1 className="display text-4xl">Admin</h1>
 
-      <div className="flex flex-wrap gap-2 border-b border-brand-100 pb-2">
+      {loadErrors.length > 0 && (
+        <Alert tone="error">
+          Could not load: {loadErrors.join(", ")}.{" "}
+          <button type="button" className="font-semibold underline underline-offset-4" onClick={reload}>
+            Retry
+          </button>
+        </Alert>
+      )}
+      {actionError && <Alert tone="error">{actionError}</Alert>}
+
+      <div className="flex flex-wrap gap-2 border-b border-brand-100 pb-2" role="group" aria-label="Admin sections">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
+            aria-pressed={tab === t.key}
             className={`text-sm px-3 py-1.5 rounded-lg ${
               tab === t.key ? "bg-brand-600 text-white" : "text-brand-600 hover:bg-brand-50"
             }`}

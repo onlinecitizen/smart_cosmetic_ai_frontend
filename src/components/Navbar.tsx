@@ -7,9 +7,9 @@ import { useAuth } from "@/lib/auth";
 
 const SECTIONS = [
   { href: "/#how", label: "How It Works" },
-  { href: "/#technology", label: "Technology" },
-  { href: "/#formula", label: "Formula" },
-  { href: "/#about", label: "About" },
+  { href: "/#product", label: "Product" },
+  { href: "/#ingredients", label: "Ingredients" },
+  { href: "/#transparency", label: "Transparency" },
 ];
 
 /** Where "Start assessment" should go: straight in if signed in, else sign up first. */
@@ -36,6 +36,14 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => setOpen(false), [pathname]);
+
+  // Escape closes the mobile menu.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -83,7 +91,12 @@ export function Navbar() {
         <div className="hidden items-center gap-5 lg:flex">
           {!loading &&
             accountLinks.map((l) => (
-              <Link key={l.href} href={l.href} className="text-[12px] text-brand-500 transition hover:text-brand-900">
+              <Link
+                key={l.href}
+                href={l.href}
+                aria-current={pathname === l.href ? "page" : undefined}
+                className={`text-[12px] transition hover:text-brand-900 ${pathname === l.href ? "text-brand-900" : "text-brand-500"}`}
+              >
                 {l.label}
               </Link>
             ))}
@@ -106,6 +119,7 @@ export function Navbar() {
           className="grid h-10 w-10 place-items-center rounded-full border border-brand-200 bg-white/60 lg:hidden"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
+          aria-controls="mobile-menu"
           aria-label={open ? "Close menu" : "Open menu"}
         >
           <span className="relative block h-3 w-4">
@@ -120,7 +134,7 @@ export function Navbar() {
       </div>
 
       {open && (
-        <div className="border-t border-brand-200/60 px-4 pb-8 pt-4 lg:hidden">
+        <div id="mobile-menu" className="border-t border-brand-200/60 px-4 pb-8 pt-4 lg:hidden">
           <nav className="flex flex-col" aria-label="Mobile">
             {SECTIONS.map((s) => (
               <Link key={s.href} href={s.href} className="display border-b border-brand-200/60 py-4 text-2xl" onClick={() => setOpen(false)}>
@@ -128,9 +142,9 @@ export function Navbar() {
               </Link>
             ))}
           </nav>
-          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm text-brand-500">
+          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-4 text-base text-brand-600">
             {accountLinks.map((l) => (
-              <Link key={l.href} href={l.href}>
+              <Link key={l.href} href={l.href} aria-current={pathname === l.href ? "page" : undefined}>
                 {l.label}
               </Link>
             ))}

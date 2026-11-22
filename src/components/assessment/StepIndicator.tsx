@@ -15,14 +15,14 @@ export function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
             </div>
             <p
               className={`mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors ${
-                state === "todo" ? "text-brand-300" : "text-brand-900"
+                state === "todo" ? "text-brand-400" : "text-brand-900"
               }`}
             >
               <span className="hidden sm:inline">Step </span>0{n}
             </p>
             <p
               className={`font-display text-base transition-colors sm:text-xl ${
-                state === "todo" ? "text-brand-300" : state === "active" ? "text-gold-700" : "text-brand-700"
+                state === "todo" ? "text-brand-400" : state === "active" ? "text-gold-700" : "text-brand-700"
               }`}
             >
               {label}

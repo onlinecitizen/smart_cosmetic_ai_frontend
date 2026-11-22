@@ -6,12 +6,16 @@ module.exports = {
       colors: {
         // Warm ivory -> champagne -> charcoal. Every existing page (including
         // admin) uses this scale, so it restyles the whole app at once.
+        // Text rule (see DESIGN.md): body/caption text uses 400 or darker.
+        // 400 and gold-700 were darkened so small text passes WCAG AA
+        // (>= 4.5:1) on both brand-50 and brand-100 backgrounds.
+        // 200/300 are for borders, dividers and decoration only.
         brand: {
           50: "#FBF8F3",
           100: "#F4EEE4",
           200: "#E8DDCC",
           300: "#D3C3A8",
-          400: "#8E7C64",
+          400: "#766651",
           500: "#6F6150",
           600: "#4F463C",
           700: "#3A342D",
@@ -22,7 +26,7 @@ module.exports = {
           100: "#F3E7CF",
           300: "#DFC596",
           500: "#C8A96E",
-          700: "#9C7E45",
+          700: "#7D6334",
         },
       },
       fontFamily: {
