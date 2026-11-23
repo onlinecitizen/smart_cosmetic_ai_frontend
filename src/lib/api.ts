@@ -1,6 +1,12 @@
 "use client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
+/** Image URLs from the API are either absolute (https://) or API paths ("/api/..."). */
+export function mediaUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return url.startsWith("/") ? `${API_BASE}${url}` : url;
+}
 
 // CSRF token held in memory only (never localStorage). Set from the
 // login/register/me responses; needed because a cross-site frontend cannot
@@ -85,6 +91,8 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
+  put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
+  del: <T = void>(path: string) => request<T>(path, { method: "DELETE" }),
   postForm: <T>(path: string, form: FormData) => request<T>(path, { method: "POST", body: form, isForm: true }),
 };
 

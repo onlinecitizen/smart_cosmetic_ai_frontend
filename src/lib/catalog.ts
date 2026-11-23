@@ -44,6 +44,10 @@ export interface CatalogProduct {
   is_test_fixture: boolean;
   reviewed_at: string | null;
   retailer: CatalogRetailer;
+  /** Displayable photos, main photo first (catalogue foundation; may be absent on old responses). */
+  images?: { id: string; url: string | null; alt_text: string | null; is_primary: boolean }[];
+  usage_instructions?: string | null;
+  warnings?: string | null;
 }
 
 export interface AdminCatalogProduct extends CatalogProduct {

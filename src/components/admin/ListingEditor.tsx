@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { api, errorMessage } from "@/lib/api";
+import { api } from "@/lib/api";
+import { adminError } from "@/lib/adminCatalog";
 import { AdminCatalogProduct } from "@/lib/catalog";
 
 /** Checks a price/stock edit before it is sent. Returns an error sentence, or null. */
-export function listingError(price: string, currency: string): string | null {
+export function listingError(price: string, currency: string, stock = ""): string | null {
   const p = price.trim();
   const c = currency.trim().toUpperCase();
+  const s = stock.trim();
+  if (s && !/^\d+$/.test(s)) return "Units in stock must be a whole number, or empty if unknown.";
   if (!p && !c) return null;
   if (!p) return "Enter a price, or clear the currency too.";
   if (!/^\d+$/.test(p)) return "Price must be a whole number, without commas or decimals.";
@@ -16,42 +19,75 @@ export function listingError(price: string, currency: string): string | null {
   return null;
 }
 
+type Listing = AdminCatalogProduct & { stock_quantity?: number | null };
+
 /**
- * Price and stock for one product (PATCH /admin/catalog/products/{id}/listing).
- * Keeps the product's review status; every change is recorded in the audit log.
+ * Price and stock for one shop's listing (PATCH /admin/catalog/products/{id}/listing).
+ * This is shop data, separate from the product's facts: it keeps the review
+ * status, and every change is audited with its old and new value. The editor
+ * sends the version it loaded, so a change made meanwhile by someone else is
+ * refused instead of being overwritten.
  */
-export function ListingEditor({ product, onSaved }: { product: AdminCatalogProduct; onSaved: () => void }) {
-  const [price, setPrice] = useState(product.price_amount != null ? String(product.price_amount) : "");
-  const [currency, setCurrency] = useState(product.currency ?? "");
-  const [availability, setAvailability] = useState(product.availability);
+export function ListingEditor({ product, onSaved }: { product: Listing; onSaved: () => void }) {
+  const original = {
+    price: product.price_amount != null ? String(product.price_amount) : "",
+    currency: product.currency ?? "",
+    availability: product.availability,
+    stock: product.stock_quantity != null ? String(product.stock_quantity) : "",
+  };
+  const [price, setPrice] = useState(original.price);
+  const [currency, setCurrency] = useState(original.currency);
+  const [availability, setAvailability] = useState(original.availability);
+  const [stock, setStock] = useState(original.stock);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const stockChanged = stock.trim() !== original.stock;
   const dirty =
-    price !== (product.price_amount != null ? String(product.price_amount) : "") ||
-    currency.toUpperCase() !== (product.currency ?? "") ||
-    availability !== product.availability;
+    price !== original.price ||
+    currency.toUpperCase() !== original.currency ||
+    availability !== original.availability ||
+    stockChanged;
 
-  async function save() {
-    const invalid = listingError(price, currency);
-    if (invalid) {
-      setError(invalid);
-      return;
-    }
+  async function send(body: Record<string, unknown>) {
     setBusy(true);
     setError(null);
     try {
       await api.patch(`/api/v1/admin/catalog/products/${product.id}/listing`, {
-        price_amount: price.trim() ? Number(price.trim()) : null,
-        currency: currency.trim() ? currency.trim().toUpperCase() : null,
-        availability,
+        ...body,
+        expected_updated_at: product.updated_at,
       });
       onSaved();
     } catch (err) {
-      setError(errorMessage(err, "Could not save the price and stock."));
+      setError(adminError(err, "Could not save the price and stock."));
     } finally {
       setBusy(false);
     }
+  }
+
+  function save() {
+    const invalid = listingError(price, currency, stock);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
+    const body: Record<string, unknown> = {
+      price_amount: price.trim() ? Number(price.trim()) : null,
+      currency: currency.trim() ? currency.trim().toUpperCase() : null,
+      availability,
+    };
+    if (stockChanged) body.stock_quantity = stock.trim() ? Number(stock.trim()) : null;
+    send(body);
+  }
+
+  /** The shop says nothing changed: record the confirmation time. */
+  function confirmUnchanged() {
+    send({
+      price_amount: product.price_amount,
+      currency: product.currency,
+      availability: product.availability,
+      stock_quantity: product.stock_quantity ?? null,
+    });
   }
 
   return (
@@ -83,9 +119,22 @@ export function ListingEditor({ product, onSaved }: { product: AdminCatalogProdu
           <option value="out_of_stock">Out of stock</option>
           <option value="unknown">Not confirmed</option>
         </select>
+        <input
+          aria-label={`Units in stock for ${product.name}`}
+          className="w-20 rounded-lg border border-brand-200 bg-white px-2 py-1"
+          inputMode="numeric"
+          placeholder="Units"
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+        />
         <button type="button" className="text-brand-700 underline" disabled={!dirty || busy} onClick={save}>
           {busy ? "Saving…" : "Save"}
         </button>
+        {!dirty && (
+          <button type="button" className="text-brand-600 underline" disabled={busy} onClick={confirmUnchanged}>
+            Shop confirmed unchanged
+          </button>
+        )}
       </div>
       {error && (
         <p role="alert" className="text-red-700">

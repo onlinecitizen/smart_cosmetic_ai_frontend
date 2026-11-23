@@ -27,7 +27,12 @@ export function CatalogProductCard({
   return (
     <article className="card flex h-full flex-col !p-4 sm:!p-5">
       <Link href={`/products/${product.id}`} tabIndex={-1} aria-hidden className="mb-4 block">
-        <ProductVisual category={product.category} categoryLabel={categoryLabel(product.category)} />
+        <ProductVisual
+          category={product.category}
+          categoryLabel={categoryLabel(product.category)}
+          image={product.images?.[0]}
+          productName={product.name}
+        />
       </Link>
       <div className="flex flex-wrap items-center gap-2">
         <span className="chip">{categoryLabel(product.category)}</span>

@@ -19,7 +19,8 @@ const csp = [
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   // Captured photos are previewed from blob: URLs and never uploaded elsewhere.
-  "img-src 'self' data: blob:",
+  // Uploaded product photos are served by the API (same origin when deployed).
+  `img-src 'self' data: blob: ${apiOrigin()}`.trim(),
   "font-src 'self' data:",
   `connect-src 'self' ${apiOrigin()}`.trim(),
   "media-src 'self' blob: mediastream:",

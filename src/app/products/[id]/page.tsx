@@ -53,7 +53,13 @@ export default function ProductDetailPage() {
       </Link>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-        <ProductVisual category={product.category} categoryLabel={category(product.category)} size="detail" />
+        <ProductVisual
+          category={product.category}
+          categoryLabel={category(product.category)}
+          size="detail"
+          image={product.images?.[0]}
+          productName={product.name}
+        />
         <div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="chip">{category(product.category)}</span>
@@ -96,6 +102,23 @@ export default function ProductDetailPage() {
 
       <div className="max-w-4xl">
       {product.description && <p className="mt-10 leading-relaxed text-brand-700">{product.description}</p>}
+
+      {(product.usage_instructions || product.warnings) && (
+        <section className="mt-10 grid gap-4 sm:grid-cols-2" aria-label="Use and precautions">
+          {product.usage_instructions && (
+            <div className="card">
+              <h2 className="eyebrow">How to use</h2>
+              <p className="mt-3 whitespace-pre-line text-brand-800">{product.usage_instructions}</p>
+            </div>
+          )}
+          {product.warnings && (
+            <div className="card">
+              <h2 className="eyebrow">Warnings and precautions</h2>
+              <p className="mt-3 whitespace-pre-line text-brand-800">{product.warnings}</p>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="mt-10" aria-labelledby="listed-for">
         <h2 id="listed-for" className="eyebrow">

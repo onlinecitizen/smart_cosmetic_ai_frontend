@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ListingEditor } from "@/components/admin/ListingEditor";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { ConfirmDialog, ConfirmRequest } from "@/components/admin/catalogue/ConfirmDialog";
+import { AuditDetails } from "@/components/admin/AuditDetails";
 import { RetentionPanel } from "@/components/admin/RetentionPanel";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Alert } from "@/components/ui/States";
 import { api, errorMessage, Formula, FormulationRule, Ingredient, Order, User } from "@/lib/api";
-import { AdminCatalogProduct, AdminRetailer } from "@/lib/catalog";
-import { ADMIN_ACTIONS, AdminOrderRequest, orderRequestApi, phoneError } from "@/lib/orderRequests";
+import { adminError } from "@/lib/adminCatalog";
+import { AdminRetailer } from "@/lib/catalog";
+import { ADMIN_ACTIONS, AdminOrderRequest, OrderRequestStatus, orderRequestApi, phoneError } from "@/lib/orderRequests";
 import { formatPrice } from "@/lib/product";
 
 type Tab =
@@ -44,6 +48,7 @@ interface WebhookEventRow {
 interface AuditRow {
   id: string;
   actor_user_id: string | null;
+  actor_email: string | null;
   action: string;
   resource_type: string;
   resource_id: string | null;
@@ -64,8 +69,15 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "audit", label: "Audit Log" },
 ];
 
+/** Order-request outcomes that end the request and are told to the customer. */
+const FINAL_REQUEST_STATUSES = new Set(["DECLINED", "CANCELLED", "COMPLETED"]);
+
 function AdminContent() {
-  const [tab, setTab] = useState<Tab>("customers");
+  const search = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => {
+    const wanted = search.get("tab");
+    return (TABS.find((t) => t.key === wanted)?.key ?? "customers") as Tab;
+  });
   const [customers, setCustomers] = useState<User[]>([]);
   const [formulas, setFormulas] = useState<Formula[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -74,11 +86,13 @@ function AdminContent() {
   const [dispatches, setDispatches] = useState<LabDispatchRow[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookEventRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
-  const [catalog, setCatalog] = useState<AdminCatalogProduct[]>([]);
   const [retailers, setRetailers] = useState<AdminRetailer[]>([]);
   const [requests, setRequests] = useState<AdminOrderRequest[]>([]);
   const [waDrafts, setWaDrafts] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [requestFilter, setRequestFilter] = useState<OrderRequestStatus | "">("");
+  const [auditFilter, setAuditFilter] = useState({ action: "", resource_type: "" });
+  const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
   // Previously every load/action failure was silent (unhandled promise).
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -92,8 +106,7 @@ function AdminContent() {
       ["orders", api.get<Order[]>("/api/v1/admin/orders").then(setOrders)],
       ["lab dispatches", api.get<LabDispatchRow[]>("/api/v1/admin/lab-dispatches").then(setDispatches)],
       ["webhook events", api.get<WebhookEventRow[]>("/api/v1/admin/webhook-events").then(setWebhooks)],
-      ["audit log", api.get<AuditRow[]>("/api/v1/audit").then(setAudit)],
-      ["catalogue", api.get<AdminCatalogProduct[]>("/api/v1/admin/catalog/products").then(setCatalog)],
+      ["audit log", loadAudit()],
       ["retailers", api.get<AdminRetailer[]>("/api/v1/admin/catalog/retailers").then(setRetailers)],
       ["order requests", orderRequestApi.adminList().then(setRequests)],
     ];
@@ -102,7 +115,15 @@ function AdminContent() {
     );
   }
 
-  useEffect(reload, []);
+  function loadAudit(filter = auditFilter) {
+    const qs = new URLSearchParams();
+    if (filter.action.trim()) qs.set("action", filter.action.trim());
+    if (filter.resource_type.trim()) qs.set("resource_type", filter.resource_type.trim());
+    const q = qs.toString();
+    return api.get<AuditRow[]>(`/api/v1/audit${q ? `?${q}` : ""}`).then(setAudit);
+  }
+
+  useEffect(reload, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function runAction(id: string, path: string, failure: string) {
     setBusyId(id);
@@ -119,22 +140,44 @@ function AdminContent() {
 
   const approveRule = (id: string) => runAction(id, `/api/v1/formulation-rules/${id}/approve`, "Could not approve the rule.");
   const disableRule = (id: string) => runAction(id, `/api/v1/formulation-rules/${id}/disable`, "Could not disable the rule.");
-  const publishProduct = (id: string) =>
-    runAction(id, `/api/v1/admin/catalog/products/${id}/publish`, "Could not publish the product.");
-  const archiveProduct = (id: string) =>
-    runAction(id, `/api/v1/admin/catalog/products/${id}/archive`, "Could not archive the product.");
-  async function setRequestStatus(id: string, status: Parameters<typeof orderRequestApi.adminSetStatus>[1]) {
+  async function applyRequestStatus(id: string, status: Parameters<typeof orderRequestApi.adminSetStatus>[1]) {
     setBusyId(id);
     setActionError(null);
     try {
       await orderRequestApi.adminSetStatus(id, status);
       reload();
     } catch (err) {
-      setActionError(errorMessage(err, "Could not update the request."));
+      setActionError(adminError(err, "Could not update the request."));
     } finally {
       setBusyId(null);
     }
   }
+
+  function setRequestStatus(r: AdminOrderRequest, status: Parameters<typeof orderRequestApi.adminSetStatus>[1], label: string) {
+    if (!FINAL_REQUEST_STATUSES.has(status)) {
+      applyRequestStatus(r.id, status);
+      return;
+    }
+    setConfirmReq({
+      title: `${label}: ${r.reference}?`,
+      body:
+        status === "COMPLETED"
+          ? "Record that the customer received the order. This closes the request and can’t be undone."
+          : "This closes the request and the customer sees the new status. It can’t be undone. Only do this after hearing from the retailer or the customer.",
+      confirmLabel: label,
+      danger: status !== "COMPLETED",
+      onConfirm: async () => {
+        try {
+          await orderRequestApi.adminSetStatus(r.id, status);
+        } catch (err) {
+          throw new Error(adminError(err, "Could not update the request."));
+        }
+        reload();
+      },
+    });
+  }
+
+  const visibleRequests = requestFilter ? requests.filter((r) => r.status === requestFilter) : requests;
 
   async function saveWhatsApp(r: AdminRetailer) {
     const raw = (waDrafts[r.id] ?? r.whatsapp_number ?? "").replace(/[\s\-().]/g, "");
@@ -345,66 +388,16 @@ function AdminContent() {
 
       {tab === "catalog" && (
         <div className="space-y-3">
-          <p className="text-sm text-brand-600">
-            Publish a product only after checking its details against the real label or partner data. Publishing
-            records you as the reviewer. Editing a published product returns it to draft. Price and stock can be updated
-            without re-review; each change is recorded in the audit log with the old and new value. Bulk import:{" "}
-            <code>python -m app.catalog.importer file.csv --retailer &quot;Name&quot;</code> (backend).
-          </p>
-          <div className="card overflow-x-auto">
-            {catalog.length === 0 ? (
-              <p className="text-sm text-brand-600">No catalogue products yet.</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-brand-500 border-b border-brand-100">
-                    <th className="py-2 pr-4">Product</th>
-                    <th className="py-2 pr-4">Retailer</th>
-                    <th className="py-2 pr-4">Ingredients</th>
-                    <th className="py-2 pr-4">Price and stock</th>
-                    <th className="py-2 pr-4">Status</th>
-                    <th className="py-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {catalog.map((p) => (
-                    <tr key={p.id} className="border-b border-brand-50 align-top">
-                      <td className="py-2 pr-4">
-                        {p.name}
-                        <span className="block font-mono text-xs text-brand-500">{p.sku}</span>
-                        {p.is_test_fixture && <span className="text-xs text-amber-800">test fixture</span>}
-                      </td>
-                      <td className="py-2 pr-4">{p.retailer.name}</td>
-                      <td className="py-2 pr-4">{p.ingredients_inci ? "Listed" : <span className="text-amber-800">Not provided</span>}</td>
-                      <td className="py-2 pr-4">
-                        <ListingEditor key={`${p.id}-${p.updated_at}`} product={p} onSaved={reload} />
-                      </td>
-                      <td className="py-2 pr-4">{p.status}</td>
-                      <td className="py-2 space-x-3 whitespace-nowrap">
-                        {p.status !== "PUBLISHED" && (
-                          <button
-                            className="text-brand-700 underline text-xs"
-                            disabled={busyId === p.id}
-                            onClick={() => publishProduct(p.id)}
-                          >
-                            Publish (details checked)
-                          </button>
-                        )}
-                        {p.status !== "ARCHIVED" && (
-                          <button
-                            className="text-red-700 underline text-xs"
-                            disabled={busyId === p.id}
-                            onClick={() => archiveProduct(p.id)}
-                          >
-                            Archive
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+          <div className="card space-y-2">
+            <h2 className="font-semibold text-brand-900">Product catalogue</h2>
+            <p className="text-sm text-brand-600">
+              Products, photos, sources, shop prices and stock, categories and the review queue are managed in the
+              catalogue section. Bulk import: <code>python -m app.catalog.importer file.csv --retailer &quot;Name&quot;</code>{" "}
+              (backend); imported products arrive as drafts.
+            </p>
+            <Link href="/admin/catalogue" className="btn-primary">
+              Open the catalogue
+            </Link>
           </div>
 
           <h2 className="pt-4 font-semibold text-brand-900">Retailers and WhatsApp ordering</h2>
@@ -467,9 +460,24 @@ function AdminContent() {
             Website requests for partner products. They are not sent to retailers automatically: contact the retailer,
             then record their answer here. Customers see these statuses. No payment is taken on this website.
           </p>
+          <label className="inline-flex items-center gap-2 text-sm">
+            <span>Show</span>
+            <select
+              className="input w-auto"
+              value={requestFilter}
+              onChange={(e) => setRequestFilter(e.target.value as OrderRequestStatus | "")}
+            >
+              <option value="">All requests</option>
+              <option value="RECEIVED">Received (waiting for the retailer)</option>
+              <option value="CONFIRMED">Retailer confirmed</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="DECLINED">Declined</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </label>
           <div className="card overflow-x-auto">
-            {requests.length === 0 ? (
-              <p className="text-sm text-brand-600">No order requests yet.</p>
+            {visibleRequests.length === 0 ? (
+              <p className="text-sm text-brand-600">{requests.length === 0 ? "No order requests yet." : "No requests with this status."}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
@@ -482,7 +490,7 @@ function AdminContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.map((r) => (
+                  {visibleRequests.map((r) => (
                     <tr key={r.id} className="border-b border-brand-50 align-top">
                       <td className="py-2 pr-4 font-mono text-xs">
                         {r.reference}
@@ -530,7 +538,7 @@ function AdminContent() {
                               a.status === "CONFIRMED" || a.status === "COMPLETED" ? "text-brand-700" : "text-red-700"
                             }`}
                             disabled={busyId === r.id}
-                            onClick={() => setRequestStatus(r.id, a.status)}
+                            onClick={() => setRequestStatus(r, a.status, a.label)}
                           >
                             {a.label}
                           </button>
@@ -595,31 +603,82 @@ function AdminContent() {
       {tab === "privacy" && <RetentionPanel />}
 
       {tab === "audit" && (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-brand-400 border-b border-brand-100">
-                <th className="py-2 pr-4">Action</th>
-                <th className="py-2 pr-4">Resource</th>
-                <th className="py-2 pr-4">Details</th>
-                <th className="py-2">When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {audit.map((a) => (
-                <tr key={a.id} className="border-b border-brand-50">
-                  <td className="py-2 pr-4">{a.action}</td>
-                  <td className="py-2 pr-4">{a.resource_type}</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-brand-600">
-                    {a.extra && Object.keys(a.extra).length > 0 ? JSON.stringify(a.extra) : ""}
-                  </td>
-                  <td className="py-2">{new Date(a.created_at).toLocaleString()}</td>
+        <div className="space-y-3">
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              loadAudit().catch((err) => setActionError(errorMessage(err, "Could not load the audit log.")));
+            }}
+          >
+            <label className="block text-sm">
+              <span className="label">Action</span>
+              <input
+                className="input"
+                placeholder="e.g. catalog_identity_published"
+                value={auditFilter.action}
+                maxLength={64}
+                onChange={(e) => setAuditFilter({ ...auditFilter, action: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="label">Resource type</span>
+              <select
+                className="input"
+                value={auditFilter.resource_type}
+                onChange={(e) => setAuditFilter({ ...auditFilter, resource_type: e.target.value })}
+              >
+                <option value="">Any</option>
+                <option value="product_identity">Products</option>
+                <option value="catalog_product">Shop listings</option>
+                <option value="catalog_category">Categories</option>
+                <option value="retailer">Retailers</option>
+                <option value="order_request">Order requests</option>
+              </select>
+            </label>
+            <button type="submit" className="btn-secondary">
+              Filter
+            </button>
+          </form>
+          <p className="text-xs text-brand-500">Read-only. Audit entries can’t be edited or deleted. Newest first.</p>
+          <div className="card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-brand-400 border-b border-brand-100">
+                  <th className="py-2 pr-4">When</th>
+                  <th className="py-2 pr-4">Who</th>
+                  <th className="py-2 pr-4">Action</th>
+                  <th className="py-2 pr-4">Resource</th>
+                  <th className="py-2">Details</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {audit.map((a) => (
+                  <tr key={a.id} className="border-b border-brand-50 align-top">
+                    <td className="py-2 pr-4 whitespace-nowrap text-xs">{new Date(a.created_at).toLocaleString()}</td>
+                    <td className="py-2 pr-4 text-xs">{a.actor_email ?? (a.actor_user_id ? "deleted account" : "system")}</td>
+                    <td className="py-2 pr-4">{a.action}</td>
+                    <td className="py-2 pr-4 text-xs">
+                      {a.resource_type === "product_identity" && a.resource_id ? (
+                        <Link href={`/admin/catalogue/${a.resource_id}`} className="underline">
+                          product
+                        </Link>
+                      ) : (
+                        a.resource_type
+                      )}
+                    </td>
+                    <td className="py-2">
+                      <AuditDetails extra={a.extra} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
+      <ConfirmDialog request={confirmReq} onClose={() => setConfirmReq(null)} />
     </div>
   );
 }
@@ -627,7 +686,9 @@ function AdminContent() {
 export default function AdminPage() {
   return (
     <RequireAuth adminOnly>
-      <AdminContent />
+      <Suspense fallback={null}>
+        <AdminContent />
+      </Suspense>
     </RequireAuth>
   );
 }

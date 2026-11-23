@@ -49,7 +49,36 @@ describe("ListingEditor", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toContain("/api/v1/admin/catalog/products/p1/listing");
     expect(init.method).toBe("PATCH");
-    expect(JSON.parse(init.body)).toEqual({ price_amount: 15000, currency: "TZS", availability: "out_of_stock" });
+    expect(JSON.parse(init.body)).toEqual({
+      price_amount: 15000,
+      currency: "TZS",
+      availability: "out_of_stock",
+      expected_updated_at: "2026-11-23T00:00:00Z",
+    });
+  });
+
+  it("shows the server's explanation when the listing changed meanwhile", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(json({ detail: { message: "This listing was changed by someone else.", code: "stale" } }, 409))
+    );
+    render(<ListingEditor product={PRODUCT} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Price for Test Product"), { target: { value: "15000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("changed by someone else");
+  });
+
+  it("records an unchanged confirmation and validates the unit count", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    const onSaved = vi.fn();
+    render(<ListingEditor product={PRODUCT} onSaved={onSaved} />);
+    fireEvent.click(screen.getByRole("button", { name: "Shop confirmed unchanged" }));
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ price_amount: 12000, availability: "in_stock" });
+    fireEvent.change(screen.getByLabelText("Units in stock for Test Product"), { target: { value: "3.5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/whole number/);
   });
 
   it("does not send an invalid price", () => {

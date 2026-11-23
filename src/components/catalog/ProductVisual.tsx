@@ -1,9 +1,11 @@
+import { mediaUrl } from "@/lib/api";
+
 /**
  * Image area for a partner product.
  *
- * The catalogue API has no product photo field yet, so this never draws a
- * product. It shows the category in type with an explicit "no photo" note,
- * so no customer mistakes it for the real packaging.
+ * Shows the product's main photo when an admin has added one. Otherwise it
+ * never draws a product: it shows the category in type with an explicit
+ * "no photo" note, so no customer mistakes it for the real packaging.
  */
 const TONES: Record<string, string> = {
   cleanser: "from-teal-50 to-teal-100",
@@ -20,11 +22,31 @@ export function ProductVisual({
   category,
   categoryLabel,
   size = "card",
+  image,
+  productName,
 }: {
   category: string;
   categoryLabel: string;
   size?: "card" | "detail";
+  image?: { url: string | null; alt_text: string | null } | null;
+  productName?: string;
 }) {
+  const src = mediaUrl(image?.url);
+  if (src) {
+    return (
+      <div
+        className={`relative overflow-hidden rounded-2xl bg-white ${size === "detail" ? "aspect-[4/3] sm:aspect-square" : "aspect-[16/9]"}`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={image?.alt_text || (productName ? `Photo of ${productName}` : "Product photo")}
+          className="h-full w-full object-contain"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
   return (
     <div
       className={`relative grid place-items-center overflow-hidden rounded-2xl bg-gradient-to-br ${
