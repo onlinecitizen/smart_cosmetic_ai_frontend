@@ -20,6 +20,9 @@ const UNSUPPORTED_CLAIMS: [RegExp, string][] = [
   [/\b(treats|cures|heals)\b/i, "catalogue tags are listing labels, not efficacy claims"],
   [/safe for (all|everyone|every|sensitive)/i, "missing ingredient data is unknown; nothing is labelled safe for everyone"],
   [/AI[- ](recommend|match|pick)/i, "product matching uses fixed rules (rules-v1), not an AI model"],
+  // Phase 3 (order requests): a submitted request is not confirmed, paid or delivered.
+  [/order (is |has been )?(confirmed|placed)|payment (received|successful|complete)|paid successfully/i, "requests are reviewed by the retailer; no payment is taken on this website"],
+  [/pay now|add to cart|card payment/i, "there is no cart or payment gateway in V1"],
 ];
 
 function sourceFiles(dir: string): string[] {

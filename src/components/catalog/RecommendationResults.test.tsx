@@ -28,7 +28,7 @@ const product: CatalogProduct = {
   concerns: ["dryness"],
   is_test_fixture: true,
   reviewed_at: null,
-  retailer: { id: "r", name: "Test Fixture Retailer (not a real partner)", city: null, is_test_fixture: true },
+  retailer: { id: "r", name: "Test Fixture Retailer (not a real partner)", city: null, is_test_fixture: true, whatsapp_available: false },
 };
 
 const base: RecommendationResult = {

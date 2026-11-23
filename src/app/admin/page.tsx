@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Alert } from "@/components/ui/States";
 import { api, errorMessage, Formula, FormulationRule, Ingredient, Order, User } from "@/lib/api";
-import { AdminCatalogProduct } from "@/lib/catalog";
+import { AdminCatalogProduct, AdminRetailer } from "@/lib/catalog";
+import { ADMIN_ACTIONS, AdminOrderRequest, orderRequestApi, phoneError } from "@/lib/orderRequests";
+import { formatPrice } from "@/lib/product";
 
-type Tab = "customers" | "formulas" | "ingredients" | "rules" | "orders" | "catalog" | "lab" | "audit";
+type Tab = "customers" | "formulas" | "ingredients" | "rules" | "orders" | "catalog" | "requests" | "lab" | "audit";
 
 interface LabDispatchRow {
   id: string;
@@ -43,6 +45,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "rules", label: "Formulation Rules" },
   { key: "orders", label: "Orders" },
   { key: "catalog", label: "Catalogue" },
+  { key: "requests", label: "Order requests" },
   { key: "lab", label: "Lab Events" },
   { key: "audit", label: "Audit Log" },
 ];
@@ -58,6 +61,9 @@ function AdminContent() {
   const [webhooks, setWebhooks] = useState<WebhookEventRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [catalog, setCatalog] = useState<AdminCatalogProduct[]>([]);
+  const [retailers, setRetailers] = useState<AdminRetailer[]>([]);
+  const [requests, setRequests] = useState<AdminOrderRequest[]>([]);
+  const [waDrafts, setWaDrafts] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   // Previously every load/action failure was silent (unhandled promise).
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
@@ -74,6 +80,8 @@ function AdminContent() {
       ["webhook events", api.get<WebhookEventRow[]>("/api/v1/admin/webhook-events").then(setWebhooks)],
       ["audit log", api.get<AuditRow[]>("/api/v1/audit").then(setAudit)],
       ["catalogue", api.get<AdminCatalogProduct[]>("/api/v1/admin/catalog/products").then(setCatalog)],
+      ["retailers", api.get<AdminRetailer[]>("/api/v1/admin/catalog/retailers").then(setRetailers)],
+      ["order requests", orderRequestApi.adminList().then(setRequests)],
     ];
     Promise.allSettled(loads.map(([, p]) => p)).then((results) =>
       setLoadErrors(results.flatMap((r, i) => (r.status === "rejected" ? [loads[i][0]] : [])))
@@ -101,6 +109,39 @@ function AdminContent() {
     runAction(id, `/api/v1/admin/catalog/products/${id}/publish`, "Could not publish the product.");
   const archiveProduct = (id: string) =>
     runAction(id, `/api/v1/admin/catalog/products/${id}/archive`, "Could not archive the product.");
+  async function setRequestStatus(id: string, status: Parameters<typeof orderRequestApi.adminSetStatus>[1]) {
+    setBusyId(id);
+    setActionError(null);
+    try {
+      await orderRequestApi.adminSetStatus(id, status);
+      reload();
+    } catch (err) {
+      setActionError(errorMessage(err, "Could not update the request."));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function saveWhatsApp(r: AdminRetailer) {
+    const raw = (waDrafts[r.id] ?? r.whatsapp_number ?? "").replace(/[\s\-().]/g, "");
+    const invalid = raw ? phoneError(raw) : null;
+    if (invalid) {
+      setActionError(`WhatsApp number for ${r.name}: ${invalid}`);
+      return;
+    }
+    setBusyId(r.id);
+    setActionError(null);
+    try {
+      await api.patch(`/api/v1/admin/catalog/retailers/${r.id}`, { whatsapp_number: raw || null });
+      setWaDrafts((d) => Object.fromEntries(Object.entries(d).filter(([k]) => k !== r.id)));
+      reload();
+    } catch (err) {
+      setActionError(errorMessage(err, "Could not save the WhatsApp number."));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const dispatchToLab = (orderId: string) =>
     runAction(orderId, `/api/v1/lab/dispatch/${orderId}`, "Could not dispatch the order to the lab.");
 
@@ -339,6 +380,136 @@ function AdminContent() {
                             Archive
                           </button>
                         )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <h2 className="pt-4 font-semibold text-brand-900">Retailers and WhatsApp ordering</h2>
+          <p className="text-sm text-brand-600">
+            WhatsApp ordering is offered only for retailers with a number here, in international format (+ and country
+            code). Enter only a number the retailer has confirmed is theirs. Clear it and save to turn WhatsApp ordering
+            off.
+          </p>
+          <div className="card overflow-x-auto">
+            {retailers.length === 0 ? (
+              <p className="text-sm text-brand-600">No retailers yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-brand-500 border-b border-brand-100">
+                    <th className="py-2 pr-4">Retailer</th>
+                    <th className="py-2 pr-4">WhatsApp number</th>
+                    <th className="py-2">Save</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {retailers.map((r) => (
+                    <tr key={r.id} className="border-b border-brand-50 align-top">
+                      <td className="py-2 pr-4">
+                        {r.name}
+                        {!r.is_active && <span className="block text-xs text-amber-800">inactive</span>}
+                        {r.is_test_fixture && <span className="block text-xs text-amber-800">test fixture</span>}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <input
+                          aria-label={`WhatsApp number for ${r.name}`}
+                          className="input max-w-[14rem]"
+                          type="tel"
+                          placeholder="Not set"
+                          value={waDrafts[r.id] ?? r.whatsapp_number ?? ""}
+                          onChange={(e) => setWaDrafts((d) => ({ ...d, [r.id]: e.target.value }))}
+                        />
+                      </td>
+                      <td className="py-2">
+                        <button
+                          className="text-brand-700 underline text-xs"
+                          disabled={busyId === r.id || waDrafts[r.id] === undefined}
+                          onClick={() => saveWhatsApp(r)}
+                        >
+                          Save
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === "requests" && (
+        <div className="space-y-3">
+          <p className="text-sm text-brand-600">
+            Website requests for partner products. They are not sent to retailers automatically: contact the retailer,
+            then record their answer here. Customers see these statuses. No payment is taken on this website.
+          </p>
+          <div className="card overflow-x-auto">
+            {requests.length === 0 ? (
+              <p className="text-sm text-brand-600">No order requests yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-brand-500 border-b border-brand-100">
+                    <th className="py-2 pr-4">Reference</th>
+                    <th className="py-2 pr-4">Retailer and items</th>
+                    <th className="py-2 pr-4">Customer</th>
+                    <th className="py-2 pr-4">Status</th>
+                    <th className="py-2">Record retailer answer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map((r) => (
+                    <tr key={r.id} className="border-b border-brand-50 align-top">
+                      <td className="py-2 pr-4 font-mono text-xs">
+                        {r.reference}
+                        <span className="block font-sans text-brand-500">{new Date(r.created_at).toLocaleString()}</span>
+                        {r.is_test_fixture && <span className="block font-sans text-amber-800">test data</span>}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {r.retailer.name}
+                        <ul className="text-xs text-brand-600">
+                          {r.items.map((i) => (
+                            <li key={i.product_id}>
+                              {i.quantity} × {i.product_name} ({i.sku})
+                            </li>
+                          ))}
+                        </ul>
+                        <span className="text-xs text-brand-500">
+                          {r.total_amount != null
+                            ? `Listed total ${formatPrice(r.total_amount, r.currency)}`
+                            : "Total not known"}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-xs">
+                        {r.customer_name}
+                        <span className="block">
+                          {r.customer_phone} ({r.contact_method === "whatsapp" ? "WhatsApp" : "call"})
+                        </span>
+                        <span className="block text-brand-500">{r.customer_email}</span>
+                        <span className="block">
+                          {r.fulfilment === "delivery" ? `Delivery: ${r.delivery_address}` : "Pickup"}
+                        </span>
+                        {r.notes && <span className="block whitespace-pre-wrap text-brand-500">Note: {r.notes}</span>}
+                      </td>
+                      <td className="py-2 pr-4">{r.status}</td>
+                      <td className="py-2 space-x-3 whitespace-nowrap">
+                        {ADMIN_ACTIONS[r.status].map((a) => (
+                          <button
+                            key={a.status}
+                            className={`underline text-xs ${
+                              a.status === "CONFIRMED" || a.status === "COMPLETED" ? "text-brand-700" : "text-red-700"
+                            }`}
+                            disabled={busyId === r.id}
+                            onClick={() => setRequestStatus(r.id, a.status)}
+                          >
+                            {a.label}
+                          </button>
+                        ))}
                       </td>
                     </tr>
                   ))}

@@ -37,6 +37,9 @@ export function Footer() {
           <Link href="/orders" className="block text-brand-600 hover:text-brand-900">
             Orders
           </Link>
+          <Link href="/order-requests" className="block text-brand-600 hover:text-brand-900">
+            My requests
+          </Link>
         </div>
       </div>
       <div className="border-t border-brand-200/70">

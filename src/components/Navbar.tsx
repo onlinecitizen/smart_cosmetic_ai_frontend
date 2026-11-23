@@ -62,6 +62,7 @@ export function Navbar() {
     ? [
         { href: "/dashboard", label: "My Formulas" },
         { href: "/orders", label: "Orders" },
+        { href: "/order-requests", label: "My Requests" },
         ...(user.role === "admin" ? [{ href: "/admin", label: "Admin" }] : []),
       ]
     : [];

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { TestFixtureBadge } from "@/components/catalog/CatalogProductCard";
+import { OrderOptions } from "@/components/catalog/OrderOptions";
 import { PageLoader } from "@/components/PageLoader";
 import { Alert } from "@/components/ui/States";
 import { ApiError, errorMessage } from "@/lib/api";
@@ -61,7 +62,7 @@ export default function ProductDetailPage() {
 
       {product.is_test_fixture && (
         <Alert tone="warning" className="mt-6">
-          This is a test fixture used for development. It is not a real product and cannot be bought.
+          This is a test fixture used for development. It is not a real product and cannot be bought. Requests for it are test data only.
         </Alert>
       )}
 
@@ -137,16 +138,7 @@ export default function ProductDetailPage() {
         )}
       </section>
 
-      <section className="card mt-10 space-y-3">
-        <h2 className="font-semibold text-brand-900">How to buy</h2>
-        <p className="text-sm text-brand-600">
-          Ordering partner products through Smart Cosmetic AI isn’t available yet. Contact {product.retailer.name}{" "}
-          directly to buy this product.
-        </p>
-        <Link href="/recommendations" className="btn-secondary">
-          Find products for my skin
-        </Link>
-      </section>
+      <OrderOptions product={product} />
 
       {product.reviewed_at && (
         <p className="mt-6 text-xs text-brand-500">

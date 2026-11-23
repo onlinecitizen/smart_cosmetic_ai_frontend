@@ -69,6 +69,11 @@ export function transparencyItems(): TransparencyItem[] {
       kind: "fact",
     },
     {
+      title: "Ordering partner products",
+      body: "You can send a request on this website or message a retailer on WhatsApp when they have set it up. A request is not a confirmed order: the retailer confirms availability and the final price, and no payment is taken on this website.",
+      kind: "fact",
+    },
+    {
       title: "Not medical advice",
       body: "This is cosmetic personalization. It does not diagnose skin conditions or replace a dermatologist.",
       kind: "fact",

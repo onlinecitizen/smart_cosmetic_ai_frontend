@@ -23,6 +23,8 @@ export interface CatalogRetailer {
   name: string;
   city: string | null;
   is_test_fixture: boolean;
+  /** True when the retailer has a WhatsApp number configured. The number itself is never sent here. */
+  whatsapp_available: boolean;
 }
 
 export interface CatalogProduct {
@@ -50,6 +52,12 @@ export interface AdminCatalogProduct extends CatalogProduct {
   reviewed_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AdminRetailer extends CatalogRetailer {
+  whatsapp_number: string | null;
+  is_active: boolean;
+  created_at: string;
 }
 
 export interface ProductList {
