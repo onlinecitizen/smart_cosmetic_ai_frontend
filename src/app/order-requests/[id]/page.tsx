@@ -104,6 +104,9 @@ function RequestDetail() {
         <h2 id="contact-heading" className="font-semibold text-brand-900">
           Your details (shared with {req.retailer.name})
         </h2>
+        {req.personal_data_removed ? (
+          <p className="mt-3">Your contact details for this request have been removed, as described in the privacy notice.</p>
+        ) : (
         <dl className="mt-3 grid gap-2 sm:grid-cols-[10rem_1fr]">
           <dt className="text-brand-500">Name</dt>
           <dd>{req.customer_name}</dd>
@@ -120,6 +123,7 @@ function RequestDetail() {
             </>
           )}
         </dl>
+        )}
       </section>
 
       {received && (

@@ -12,8 +12,10 @@ export function PasswordField({
   invalid,
   describedBy,
   minLength,
+  label = "Password",
 }: {
   id: string;
+  label?: string;
   value: string;
   onChange: (value: string) => void;
   autoComplete: "current-password" | "new-password";
@@ -31,7 +33,7 @@ export function PasswordField({
     <div>
       <div className="mb-1.5 flex items-center justify-between">
         <label className="label !mb-0" htmlFor={id}>
-          Password
+          {label}
         </label>
         <button
           type="button"

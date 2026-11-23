@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ListingEditor } from "@/components/admin/ListingEditor";
+import { RetentionPanel } from "@/components/admin/RetentionPanel";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Alert } from "@/components/ui/States";
 import { api, errorMessage, Formula, FormulationRule, Ingredient, Order, User } from "@/lib/api";
@@ -8,7 +10,17 @@ import { AdminCatalogProduct, AdminRetailer } from "@/lib/catalog";
 import { ADMIN_ACTIONS, AdminOrderRequest, orderRequestApi, phoneError } from "@/lib/orderRequests";
 import { formatPrice } from "@/lib/product";
 
-type Tab = "customers" | "formulas" | "ingredients" | "rules" | "orders" | "catalog" | "requests" | "lab" | "audit";
+type Tab =
+  | "customers"
+  | "formulas"
+  | "ingredients"
+  | "rules"
+  | "orders"
+  | "catalog"
+  | "requests"
+  | "lab"
+  | "privacy"
+  | "audit";
 
 interface LabDispatchRow {
   id: string;
@@ -35,6 +47,7 @@ interface AuditRow {
   action: string;
   resource_type: string;
   resource_id: string | null;
+  extra: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -47,6 +60,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "catalog", label: "Catalogue" },
   { key: "requests", label: "Order requests" },
   { key: "lab", label: "Lab Events" },
+  { key: "privacy", label: "Privacy" },
   { key: "audit", label: "Audit Log" },
 ];
 
@@ -333,7 +347,8 @@ function AdminContent() {
         <div className="space-y-3">
           <p className="text-sm text-brand-600">
             Publish a product only after checking its details against the real label or partner data. Publishing
-            records you as the reviewer. Editing a published product returns it to draft. Bulk import:{" "}
+            records you as the reviewer. Editing a published product returns it to draft. Price and stock can be updated
+            without re-review; each change is recorded in the audit log with the old and new value. Bulk import:{" "}
             <code>python -m app.catalog.importer file.csv --retailer &quot;Name&quot;</code> (backend).
           </p>
           <div className="card overflow-x-auto">
@@ -346,6 +361,7 @@ function AdminContent() {
                     <th className="py-2 pr-4">Product</th>
                     <th className="py-2 pr-4">Retailer</th>
                     <th className="py-2 pr-4">Ingredients</th>
+                    <th className="py-2 pr-4">Price and stock</th>
                     <th className="py-2 pr-4">Status</th>
                     <th className="py-2">Actions</th>
                   </tr>
@@ -360,6 +376,9 @@ function AdminContent() {
                       </td>
                       <td className="py-2 pr-4">{p.retailer.name}</td>
                       <td className="py-2 pr-4">{p.ingredients_inci ? "Listed" : <span className="text-amber-800">Not provided</span>}</td>
+                      <td className="py-2 pr-4">
+                        <ListingEditor key={`${p.id}-${p.updated_at}`} product={p} onSaved={reload} />
+                      </td>
                       <td className="py-2 pr-4">{p.status}</td>
                       <td className="py-2 space-x-3 whitespace-nowrap">
                         {p.status !== "PUBLISHED" && (
@@ -486,6 +505,10 @@ function AdminContent() {
                         </span>
                       </td>
                       <td className="py-2 pr-4 text-xs">
+                        {r.personal_data_removed ? (
+                          <span className="text-brand-500">Contact details removed</span>
+                        ) : (
+                        <>
                         {r.customer_name}
                         <span className="block">
                           {r.customer_phone} ({r.contact_method === "whatsapp" ? "WhatsApp" : "call"})
@@ -495,6 +518,8 @@ function AdminContent() {
                           {r.fulfilment === "delivery" ? `Delivery: ${r.delivery_address}` : "Pickup"}
                         </span>
                         {r.notes && <span className="block whitespace-pre-wrap text-brand-500">Note: {r.notes}</span>}
+                        </>
+                        )}
                       </td>
                       <td className="py-2 pr-4">{r.status}</td>
                       <td className="py-2 space-x-3 whitespace-nowrap">
@@ -567,6 +592,8 @@ function AdminContent() {
         </div>
       )}
 
+      {tab === "privacy" && <RetentionPanel />}
+
       {tab === "audit" && (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
@@ -574,6 +601,7 @@ function AdminContent() {
               <tr className="text-left text-brand-400 border-b border-brand-100">
                 <th className="py-2 pr-4">Action</th>
                 <th className="py-2 pr-4">Resource</th>
+                <th className="py-2 pr-4">Details</th>
                 <th className="py-2">When</th>
               </tr>
             </thead>
@@ -582,6 +610,9 @@ function AdminContent() {
                 <tr key={a.id} className="border-b border-brand-50">
                   <td className="py-2 pr-4">{a.action}</td>
                   <td className="py-2 pr-4">{a.resource_type}</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-brand-600">
+                    {a.extra && Object.keys(a.extra).length > 0 ? JSON.stringify(a.extra) : ""}
+                  </td>
                   <td className="py-2">{new Date(a.created_at).toLocaleString()}</td>
                 </tr>
               ))}

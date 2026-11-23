@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccountDeletedNotice } from "@/components/AccountDeletedNotice";
 import { AssessmentLink } from "@/components/Navbar";
 import { Reveal } from "@/components/Reveal";
 import { PersonalBottle } from "@/components/home/PersonalBottle";
@@ -35,6 +36,7 @@ const STEPS = [
 export default function HomePage() {
   return (
     <div className="overflow-x-hidden">
+      <AccountDeletedNotice />
       {/* ================= HERO ================= */}
       <section className="relative">
         <div

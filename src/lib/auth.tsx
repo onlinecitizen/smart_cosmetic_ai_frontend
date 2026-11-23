@@ -8,7 +8,7 @@ interface AuthContextValue {
   loading: boolean;
   refresh: () => Promise<void>;
   login: (email: string, password: string) => Promise<User>;
-  register: (email: string, fullName: string, password: string) => Promise<User>;
+  register: (email: string, fullName: string, password: string, acceptPrivacyNotice: boolean) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -42,8 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return u;
   }, []);
 
-  const register = useCallback(async (email: string, fullName: string, password: string) => {
-    const u = await api.post<User>("/api/v1/auth/register", { email, full_name: fullName, password });
+  const register = useCallback(async (email: string, fullName: string, password: string, acceptPrivacyNotice: boolean) => {
+    const u = await api.post<User>("/api/v1/auth/register", {
+      email,
+      full_name: fullName,
+      password,
+      accept_privacy_notice: acceptPrivacyNotice,
+    });
     setCsrfToken(u.csrf_token ?? null);
     setUser(u);
     return u;

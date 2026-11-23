@@ -25,15 +25,20 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedNotice, setAcceptedNotice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!acceptedNotice) {
+      setError("Please confirm you have read the privacy notice.");
+      return;
+    }
     setSubmitting(true);
     try {
-      await register(email, fullName, password);
+      await register(email, fullName, password, acceptedNotice);
       router.push(safeNextPath() ?? "/dashboard");
     } catch (err) {
       setError(registerError(err));
@@ -92,6 +97,22 @@ export default function RegisterPage() {
           minLength={8}
           describedBy={error ? "register-error" : undefined}
         />
+        <label className="flex cursor-pointer items-start gap-3 text-sm text-brand-700">
+          <input
+            type="checkbox"
+            checked={acceptedNotice}
+            onChange={(e) => setAcceptedNotice(e.target.checked)}
+            className="mt-1 accent-brand-900"
+            required
+          />
+          <span>
+            I have read the{" "}
+            <Link href="/privacy" target="_blank" className="text-brand-900 underline underline-offset-4">
+              privacy notice
+            </Link>{" "}
+            and understand how my information is used.
+          </span>
+        </label>
         {error && (
           <div id="register-error">
             <Alert tone="error">{error}</Alert>

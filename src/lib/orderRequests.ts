@@ -70,6 +70,8 @@ export interface OrderRequest {
   delivery_address: string | null;
   notes: string | null;
   is_test_fixture: boolean;
+  /** Contact details were removed (retention period or account deletion). */
+  personal_data_removed?: boolean;
   created_at: string;
   updated_at: string;
   next_steps: string[];

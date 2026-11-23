@@ -23,6 +23,9 @@ const UNSUPPORTED_CLAIMS: [RegExp, string][] = [
   // Phase 3 (order requests): a submitted request is not confirmed, paid or delivered.
   [/order (is |has been )?(confirmed|placed)|payment (received|successful|complete)|paid successfully/i, "requests are reviewed by the retailer; no payment is taken on this website"],
   [/pay now|add to cart|card payment/i, "there is no cart or payment gateway in V1"],
+  // Phase 4 (pilot hardening): passing tests is not legal compliance, and no system is unbreakable.
+  [/(fully |100% )?(compliant|compliance) with|GDPR|PDPA[- ]compliant|meets all (legal|regulatory)/i, "legal compliance has not been reviewed by a qualified adviser"],
+  [/bank[- ]level|military[- ]grade|completely secure|100% secure|unhackable/i, "security claims must not overstate the controls"],
 ];
 
 function sourceFiles(dir: string): string[] {

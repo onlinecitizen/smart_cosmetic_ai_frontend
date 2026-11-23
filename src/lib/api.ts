@@ -70,6 +70,9 @@ export function errorMessage(err: unknown, fallback: string): string {
     if (err.status === 401) return "Your session has expired. Please log in again.";
     if (err.status === 403) return "We couldn’t verify your session. Please refresh the page and try again.";
     if (err.status === 404) return "We couldn’t find that. It may have been removed.";
+    // The backend's 429 detail is already a plain sentence with the wait time.
+    if (err.status === 429)
+      return typeof err.detail === "string" ? err.detail : "Too many attempts. Please wait a few minutes and try again.";
     if (err.status === 0 || err.status >= 500) return "Our server is having trouble right now. Please try again shortly.";
   } else if (err instanceof TypeError) {
     // fetch() rejects with a TypeError when the network is unreachable.

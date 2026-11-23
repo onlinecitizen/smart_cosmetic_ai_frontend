@@ -40,6 +40,12 @@ export function Footer() {
           <Link href="/order-requests" className="block text-brand-600 hover:text-brand-900">
             My requests
           </Link>
+          <Link href="/account" className="block text-brand-600 hover:text-brand-900">
+            Account and data
+          </Link>
+          <Link href="/privacy" className="block text-brand-600 hover:text-brand-900">
+            Privacy notice
+          </Link>
         </div>
       </div>
       <div className="border-t border-brand-200/70">
