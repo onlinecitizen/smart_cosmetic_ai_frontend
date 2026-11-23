@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ProductVisual } from "@/components/catalog/ProductVisual";
 import { DemoBadge } from "@/components/ui/States";
 import { AVAILABILITY_LABEL, CatalogProduct } from "@/lib/catalog";
 import { formatPrice } from "@/lib/product";
@@ -24,7 +25,10 @@ export function CatalogProductCard({
   const price = product.price_amount != null ? formatPrice(product.price_amount, product.currency) : "Price not provided";
 
   return (
-    <article className="card flex h-full flex-col">
+    <article className="card flex h-full flex-col !p-4 sm:!p-5">
+      <Link href={`/products/${product.id}`} tabIndex={-1} aria-hidden className="mb-4 block">
+        <ProductVisual category={product.category} categoryLabel={categoryLabel(product.category)} />
+      </Link>
       <div className="flex flex-wrap items-center gap-2">
         <span className="chip">{categoryLabel(product.category)}</span>
         {product.is_test_fixture && <TestFixtureBadge />}

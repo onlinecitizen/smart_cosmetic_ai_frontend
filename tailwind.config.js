@@ -28,6 +28,24 @@ module.exports = {
           500: "#C8A96E",
           700: "#7D6334",
         },
+        // Accents (Phase 1 experience). Use sparingly: blush for warmth and
+        // editorial moments, teal for the Beauty Studio and its actions.
+        // 700 shades are the only ones used for text (>= 4.5:1 on brand-50).
+        blush: {
+          50: "#FBF1EE",
+          100: "#F6E1DB",
+          300: "#E7B9AE",
+          500: "#C98476",
+          700: "#8E4A3F",
+        },
+        teal: {
+          50: "#EEF6F5",
+          100: "#D9ECEA",
+          300: "#8FC1BE",
+          500: "#2F7F86",
+          700: "#1A5E66",
+          900: "#103E44",
+        },
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],

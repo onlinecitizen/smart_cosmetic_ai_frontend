@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { TestFixtureBadge } from "@/components/catalog/CatalogProductCard";
 import { OrderOptions } from "@/components/catalog/OrderOptions";
+import { ProductVisual } from "@/components/catalog/ProductVisual";
 import { PageLoader } from "@/components/PageLoader";
 import { Alert } from "@/components/ui/States";
 import { ApiError, errorMessage } from "@/lib/api";
@@ -46,49 +47,55 @@ export default function ProductDetailPage() {
     .filter(Boolean);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 pb-24 pt-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 pb-24 pt-8 sm:px-6">
       <Link href="/products" className="text-xs uppercase tracking-[0.2em] text-brand-600 hover:text-brand-900">
         ← All products
       </Link>
 
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <span className="chip">{category(product.category)}</span>
-        {product.is_test_fixture && <TestFixtureBadge />}
+      <div className="mt-6 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <ProductVisual category={product.category} categoryLabel={category(product.category)} size="detail" />
+        <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="chip">{category(product.category)}</span>
+          {product.is_test_fixture && <TestFixtureBadge />}
+        </div>
+        <h1 className="display mt-4 text-4xl sm:text-5xl">{product.name}</h1>
+        <p className="mt-2 text-brand-600">
+          {[product.brand, product.size_label].filter(Boolean).join(" · ") || "Brand and size not provided"}
+        </p>
+
+        {product.is_test_fixture && (
+          <Alert tone="warning" className="mt-6">
+            This is a test fixture used for development. It is not a real product and cannot be bought. Requests for it are test data only.
+          </Alert>
+        )}
+
+        <section className="card mt-8 grid gap-6 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3" aria-label="Price and availability">
+          <div>
+            <p className="text-xs text-brand-500">Price</p>
+            <p className="display mt-1 text-3xl">
+              {product.price_amount != null ? formatPrice(product.price_amount, product.currency) : "Not provided"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-brand-500">Availability</p>
+            <p className="mt-2 font-semibold text-brand-900">
+              {AVAILABILITY_LABEL[product.availability] ?? product.availability}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-brand-500">Sold by</p>
+            <p className="mt-2 font-semibold text-brand-900">
+              {product.retailer.name}
+              {product.retailer.city ? `, ${product.retailer.city}` : ""}
+            </p>
+          </div>
+        </section>
+        </div>
       </div>
-      <h1 className="display mt-4 text-4xl sm:text-5xl">{product.name}</h1>
-      <p className="mt-2 text-brand-600">
-        {[product.brand, product.size_label].filter(Boolean).join(" · ") || "Brand and size not provided"}
-      </p>
 
-      {product.is_test_fixture && (
-        <Alert tone="warning" className="mt-6">
-          This is a test fixture used for development. It is not a real product and cannot be bought. Requests for it are test data only.
-        </Alert>
-      )}
-
-      <section className="card mt-8 grid gap-6 sm:grid-cols-3" aria-label="Price and availability">
-        <div>
-          <p className="text-xs text-brand-500">Price</p>
-          <p className="display mt-1 text-3xl">
-            {product.price_amount != null ? formatPrice(product.price_amount, product.currency) : "Not provided"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-brand-500">Availability</p>
-          <p className="mt-2 font-semibold text-brand-900">
-            {AVAILABILITY_LABEL[product.availability] ?? product.availability}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-brand-500">Sold by</p>
-          <p className="mt-2 font-semibold text-brand-900">
-            {product.retailer.name}
-            {product.retailer.city ? `, ${product.retailer.city}` : ""}
-          </p>
-        </div>
-      </section>
-
-      {product.description && <p className="mt-8 leading-relaxed text-brand-700">{product.description}</p>}
+      <div className="max-w-4xl">
+      {product.description && <p className="mt-10 leading-relaxed text-brand-700">{product.description}</p>}
 
       <section className="mt-10" aria-labelledby="listed-for">
         <h2 id="listed-for" className="eyebrow">
@@ -145,6 +152,7 @@ export default function ProductDetailPage() {
           Listing reviewed {new Date(product.reviewed_at).toLocaleDateString(undefined, { dateStyle: "long" })}.
         </p>
       )}
+      </div>
     </div>
   );
 }

@@ -1,195 +1,114 @@
+"use client";
+
 import Link from "next/link";
 import { AccountDeletedNotice } from "@/components/AccountDeletedNotice";
-import { AssessmentLink } from "@/components/Navbar";
-import { Reveal } from "@/components/Reveal";
-import { PersonalBottle } from "@/components/home/PersonalBottle";
-import { IngredientShowcase } from "@/components/home/IngredientShowcase";
-import { ProductCard } from "@/components/home/ProductCard";
-import { DemoBadge } from "@/components/ui/States";
-import { SITE_STATUS, transparencyItems } from "@/lib/siteStatus";
+import { EditorialVisual } from "@/components/editorial/EditorialVisual";
+import { MessageKey, useT } from "@/lib/i18n";
+import { useCatalogOptions } from "@/lib/useCatalogOptions";
 
-// Each step describes what the application actually does (see DESIGN.md
-// "Copy rules"). Do not add claims here without matching backend behaviour.
-const STEPS = [
-  {
-    n: "01",
-    title: "Take one photo",
-    body: "Use your camera or upload a photo. It is checked for lighting and sharpness, then discarded.",
-  },
-  {
-    n: "02",
-    title: "See your skin scores",
-    body: "Four scores from 0 to 100: hydration, redness, pore density and barrier index.",
-  },
-  {
-    n: "03",
-    title: "Get your formula",
-    body: "Formulation rules turn your scores into exact ingredient volumes, and each formula is checked against concentration limits.",
-  },
-  {
-    n: "04",
-    title: "Request your serum",
-    body: "Review every ingredient and the price, then place an order request. No payment is taken online.",
-  },
+// Every statement here describes what the application does today (DESIGN.md
+// "Copy rules"). Do not add claims without matching backend behaviour.
+const HOW: [MessageKey, MessageKey][] = [
+  ["home.how.1.title", "home.how.1.body"],
+  ["home.how.2.title", "home.how.2.body"],
+  ["home.how.3.title", "home.how.3.body"],
+  ["home.how.4.title", "home.how.4.body"],
+];
+const TRUST: [MessageKey, MessageKey][] = [
+  ["home.trust.1.title", "home.trust.1.body"],
+  ["home.trust.2.title", "home.trust.2.body"],
+  ["home.trust.3.title", "home.trust.3.body"],
 ];
 
 export default function HomePage() {
+  const { t } = useT();
+  const { options } = useCatalogOptions();
+
   return (
-    <div className="overflow-x-hidden">
+    <>
       <AccountDeletedNotice />
-      {/* ================= HERO ================= */}
-      <section className="relative">
-        <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,#F3E7CF_0%,transparent_55%),radial-gradient(ellipse_at_10%_90%,#F4EEE4_0%,transparent_50%)]"
-          aria-hidden
-        />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-4 px-4 pb-14 pt-8 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-6 md:pb-24 md:pt-16">
-          <div className="space-y-6 sm:space-y-8">
-            <p className="eyebrow">Personalized skincare</p>
-            <h1 className="display text-[2.75rem] leading-[0.98] sm:text-7xl lg:text-[5.4rem]">
-              Your skin profile.
-              <br />
-              <em className="text-gold-700">Your formula.</em>
-            </h1>
-            <p className="max-w-md text-base leading-relaxed text-brand-600 sm:text-lg">
-              Take one photo and get a serum formula built from your skin scores, with every ingredient, amount and
-              reason shown before you order.
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <AssessmentLink className="btn-primary">Start my skin assessment</AssessmentLink>
-              <a href="#how" className="btn-secondary">
-                How it works
-              </a>
-            </div>
-            <div className="space-y-2 text-xs leading-relaxed text-brand-500">
-              {SITE_STATUS.skinScoresAreDemo && (
-                <p className="flex flex-wrap items-center gap-2">
-                  <DemoBadge>Early version</DemoBadge>
-                  <span>Skin scores currently come from a demonstration model.</span>
-                </p>
-              )}
-              <p>Cosmetic personalization, not a medical diagnosis.</p>
-            </div>
+
+      <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-10 pt-6 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:pb-20 lg:pt-12">
+        <div>
+          <p className="eyebrow">{t("home.eyebrow")}</p>
+          <h1 className="display mt-5 text-[2.6rem] leading-[1.04] sm:text-6xl lg:text-[4.2rem]">{t("home.title")}</h1>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-brand-600 sm:text-lg">{t("home.lead")}</p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link href="/studio" className="btn-studio !py-4 sm:!px-8">
+              {t("home.cta.routine")}
+            </Link>
+            <Link href="/products" className="btn-secondary !py-4 sm:!px-8">
+              {t("home.cta.products")}
+            </Link>
           </div>
-          <div className="relative mx-auto h-[260px] w-[150px] sm:h-[520px] sm:w-[300px]">
-            <PersonalBottle className="h-full w-full" />
-          </div>
+          <p className="mt-4 text-xs text-brand-500">{t("home.note")}</p>
         </div>
+        <EditorialVisual variant="hero" className="h-[300px] sm:h-[460px]" />
       </section>
 
-      {/* ================= HOW IT WORKS ================= */}
-      <section id="how" className="scroll-mt-20 border-y border-brand-200/70 bg-white/40">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-28">
-          <Reveal className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <p className="eyebrow mb-4">How it works</p>
-              <h2 className="display text-4xl sm:text-6xl">Four steps from photo to formula.</h2>
-            </div>
-          </Reveal>
-          <ol className="mt-10 grid gap-px overflow-hidden rounded-3xl border border-brand-200/70 bg-brand-200/70 sm:grid-cols-2 lg:grid-cols-4 md:mt-14">
-            {STEPS.map((s) => (
-              <li key={s.n} className="flex h-full flex-col gap-6 bg-brand-50 p-6 sm:gap-10 sm:p-8">
-                <span className="font-display text-4xl text-brand-400 sm:text-5xl" aria-hidden>
-                  {s.n}
+      {options && options.categories.length > 0 && (
+        <section aria-labelledby="categories-heading" className="mx-auto max-w-6xl px-4 pb-14 sm:px-6">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <h2 id="categories-heading" className="display text-3xl sm:text-4xl">
+              {t("home.categories")}
+            </h2>
+            <p className="text-sm text-brand-600">{t("home.categories.lead")}</p>
+          </div>
+          <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {options.categories.map((c, i) => (
+              <li key={c.code}>
+                <Link
+                  href={`/products?category=${encodeURIComponent(c.code)}`}
+                  className={`group flex h-24 items-end justify-between rounded-2xl border border-brand-200/70 p-4 transition hover:-translate-y-0.5 hover:shadow-soft sm:h-28 ${
+                    i % 3 === 0 ? "bg-teal-50" : i % 3 === 1 ? "bg-blush-50" : "bg-gold-100/60"
+                  }`}
+                >
+                  <span className="display text-xl leading-tight text-brand-900">{c.label}</span>
+                  <span aria-hidden className="text-brand-500 transition group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section id="how" aria-labelledby="how-heading" className="border-y border-brand-200/70 bg-white/50">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+          <p className="eyebrow">{t("home.how")}</p>
+          <h2 id="how-heading" className="sr-only">
+            {t("home.how")}
+          </h2>
+          <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {HOW.map(([title, body], i) => (
+              <li key={title} className="card">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-teal-50 text-sm font-semibold text-teal-700">
+                  {i + 1}
                 </span>
-                <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-900">
-                    <span className="sr-only">Step {s.n}: </span>
-                    {s.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-brand-600">{s.body}</p>
-                </div>
+                <h3 className="mt-4 font-semibold text-brand-900">{t(title)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-brand-600">{t(body)}</p>
               </li>
             ))}
           </ol>
-        </div>
-      </section>
-
-      {/* ================= PRODUCT ================= */}
-      <section id="product" className="scroll-mt-20 mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-28">
-        <Reveal className="mb-8 md:mb-12">
-          <p className="eyebrow mb-4">What you can order</p>
-          <h2 className="display text-4xl sm:text-6xl">One serum, formulated for you.</h2>
-        </Reveal>
-        <div className="max-w-3xl">
-          <ProductCard />
-        </div>
-      </section>
-
-      {/* ================= PARTNER PRODUCTS ================= */}
-      <section id="partner-products" className="scroll-mt-20 border-y border-brand-200/70 bg-white/40">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 md:grid-cols-[1.2fr_1fr] md:items-center md:py-24">
-          <div>
-            <p className="eyebrow mb-4">Partner products</p>
-            <h2 className="display text-4xl sm:text-5xl">Prefer a ready-made product?</h2>
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-brand-600 sm:text-base">
-              Tell us your skin type, what you’d like help with and any ingredients to avoid. We match your answers
-              against reviewed listings from partner retailers and explain every result.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
-            <Link href="/recommendations" className="btn-primary">
-              Find products for my skin
-            </Link>
-            <Link href="/products" className="btn-secondary">
-              Browse partner products
+          <div className="mt-8">
+            <Link href="/studio" className="btn-studio">
+              {t("home.cta.routine")}
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ================= INGREDIENTS ================= */}
-      <section id="ingredients" className="scroll-mt-20 bg-brand-100/60">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-28">
-          <Reveal className="mb-10 flex flex-col justify-between gap-4 md:mb-14 md:flex-row md:items-end">
-            <div>
-              <p className="eyebrow mb-4">Ingredients</p>
-              <h2 className="display text-4xl sm:text-6xl">What can go into your formula.</h2>
-            </div>
-            <p className="max-w-sm text-sm text-brand-600 sm:text-base">
-              Your scores decide which of these are added and how much. Your formula page lists each one with its
-              volume, concentration and the reason it was added.
-            </p>
-          </Reveal>
-          <IngredientShowcase />
-        </div>
-      </section>
-
-      {/* ================= TRANSPARENCY ================= */}
-      <section id="transparency" className="scroll-mt-20 mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-28">
-        <Reveal>
-          <p className="eyebrow mb-4">Transparency</p>
-          <h2 className="display max-w-3xl text-4xl sm:text-6xl">What’s real today, and what isn’t yet.</h2>
-        </Reveal>
-        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 md:mt-14">
-          {transparencyItems().map((item) => (
-            <li key={item.title} className="card h-full">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-semibold text-brand-900">{item.title}</h3>
-                {item.kind === "demo" && <DemoBadge />}
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-brand-600">{item.body}</p>
+      <section aria-label="What you can rely on" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+        <ul className="grid gap-6 rounded-3xl bg-brand-100/70 p-6 sm:grid-cols-3 sm:p-8">
+          {TRUST.map(([title, body]) => (
+            <li key={title}>
+              <p className="font-semibold text-brand-900">{t(title)}</p>
+              <p className="mt-2 text-sm leading-relaxed text-brand-600">{t(body)}</p>
             </li>
           ))}
         </ul>
       </section>
-
-      {/* ================= FINAL CTA ================= */}
-      <section className="relative overflow-hidden bg-brand-900">
-        <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_120%,rgba(200,169,110,0.35)_0%,transparent_60%)]"
-          aria-hidden
-        />
-        <div className="relative mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 md:py-32">
-          <h2 className="display text-4xl !text-brand-50 sm:text-6xl">
-            Ready to see
-            <br />
-            <em className="text-gold-300">your formula?</em>
-          </h2>
-          <AssessmentLink className="btn-gold mt-10">Start my skin assessment</AssessmentLink>
-          <p className="mt-6 text-xs text-brand-300">Free to try. You only order if you want to.</p>
-        </div>
-      </section>
-    </div>
+    </>
   );
 }

@@ -76,3 +76,24 @@ Customer-facing text may only describe what the code really does.
 - Touch targets are at least 44 px (`h-11`).
 - Status is never shown by colour alone; badges always include text.
 - Animations respect `prefers-reduced-motion` (see the end of `globals.css`).
+
+## 7. Phase 1 experience (Beauty Studio and discovery)
+
+- **Accent tokens:**
+  - `blush` (50–700) adds warmth and editorial moments; only `blush-700` (#8E4A3F) is used for text.
+  - `teal` (50–900) marks the Beauty Studio and its actions; `teal-700` (#1A5E66) carries white text at about 7:1 contrast.
+  - Gold stays decorative.
+- **Buttons:** `.btn-studio` (teal) is the single primary action for Studio and discovery flows. `.btn-primary` (charcoal) stays for account and ordering actions. `.btn-secondary` sits beside either.
+- **Option tiles:** `.option-tile` wraps a native radio or checkbox. That keeps arrow keys and Space working, and gives a 52 px touch target, a teal checked state and a gold focus ring.
+- **Assessment:**
+  - `components/studio/Assessment.tsx` is a fixed full-screen dialog (100dvh).
+  - The header (exit and progress) and footer (Back / Next) never move. Only the question area changes, and only it scrolls on very small screens.
+  - The next question rises into place (`.question-enter-up`); going back drops it in (`.question-enter-down`). Both are disabled under `prefers-reduced-motion`.
+  - Focus moves to each question heading. Enter submits.
+- **Navigation:**
+  - Desktop: top bar with the Studio as the call to action.
+  - Phones: a bottom tab bar (`components/BottomNav.tsx`), hidden in the assessment and in admin, plus the menu for secondary links.
+- **Imagery:**
+  - `components/editorial/EditorialVisual.tsx` shows an approved photo from `lib/editorial.ts`; until one is supplied, it shows an art-directed, decorative illustration.
+  - `components/catalog/ProductVisual.tsx` never draws a product. The API has no photo field, so it shows the category and "No photo supplied yet".
+- **Language:** strings for navigation, home and Studio live in `lib/i18n.tsx`. English is complete. Kiswahili is a draft, hidden unless `NEXT_PUBLIC_ENABLE_KISWAHILI=true`, and needs native-speaker review.

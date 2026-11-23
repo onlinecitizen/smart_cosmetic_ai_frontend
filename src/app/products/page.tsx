@@ -21,6 +21,21 @@ export default function ProductsPage() {
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Category/search can arrive in the URL (homepage category tiles). Read them
+  // once on the client before the first request.
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const c = params.get("category");
+    const q = params.get("q");
+    if (c) setCategory(c.slice(0, 32));
+    if (q) {
+      setQuery(q.slice(0, 80));
+      setSubmittedQuery(q.slice(0, 80).trim());
+    }
+    setReady(true);
+  }, []);
 
   const load = useCallback(
     async (offset: number) => {
@@ -38,8 +53,8 @@ export default function ProductsPage() {
   );
 
   useEffect(() => {
-    load(0);
-  }, [load]);
+    if (ready) load(0);
+  }, [load, ready]);
 
   async function loadMore() {
     setLoadingMore(true);
@@ -53,14 +68,14 @@ export default function ProductsPage() {
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div>
-          <p className="eyebrow">Partner products</p>
-          <h1 className="display mt-4 text-4xl sm:text-5xl">Products</h1>
+          <p className="eyebrow">Partner products · Zanzibar</p>
+          <h1 className="display mt-4 text-4xl sm:text-5xl">Explore products</h1>
           <p className="mt-3 max-w-xl text-sm text-brand-600">
             Products supplied by partner retailers. Each listing is reviewed before it appears here.
           </p>
         </div>
-        <Link href="/recommendations" className="btn-primary">
-          Find products for my skin
+        <Link href="/studio" className="btn-studio">
+          Discover my routine
         </Link>
       </div>
 
@@ -90,14 +105,14 @@ export default function ProductsPage() {
       </form>
 
       {options && (
-        <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+        <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0" role="group" aria-label="Filter by category">
           {[{ code: "", label: "All" }, ...options.categories].map((c) => (
             <button
               key={c.code || "all"}
               type="button"
               aria-pressed={category === c.code}
               onClick={() => setCategory(c.code)}
-              className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+              className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition ${
                 category === c.code
                   ? "border-brand-900 bg-brand-900 text-brand-50"
                   : "border-brand-300 bg-white/70 text-brand-700 hover:border-brand-700"
@@ -122,7 +137,7 @@ export default function ProductsPage() {
             <p className="text-sm text-brand-600">
               {filtered
                 ? "Try another category or search term."
-                : "Products appear here once a partner retailer’s listings have been reviewed. You can still create a personalized serum formula."}
+                : "Products appear here once a partner retailer’s listings have been reviewed. Please check back soon."}
             </p>
             {filtered ? (
               <button
@@ -137,8 +152,8 @@ export default function ProductsPage() {
                 Clear filters
               </button>
             ) : (
-              <Link href="/analyze" className="btn-secondary">
-                Create a serum formula
+              <Link href="/" className="btn-secondary">
+                Back to home
               </Link>
             )}
           </div>

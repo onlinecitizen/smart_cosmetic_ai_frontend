@@ -30,7 +30,7 @@ describe("ProductsPage", () => {
     vi.stubGlobal("fetch", routeFetch(() => json({ items: [], total: 0 })));
     render(<ProductsPage />);
     expect(await screen.findByText("No partner products are listed yet.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create a serum formula" })).toHaveAttribute("href", "/analyze");
+    expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/");
   });
 
   it("shows an error with retry instead of an empty list when loading fails", async () => {
@@ -55,5 +55,18 @@ describe("ProductsPage", () => {
     expect(serum).toHaveAttribute("aria-pressed", "true");
     expect(await screen.findByText("No products match your filters.")).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes("category=serum"))).toBe(true);
+  });
+
+  it("opens pre-filtered when a category arrives in the URL (homepage tiles)", async () => {
+    window.history.pushState({}, "", "/products?category=serum");
+    const fetchMock = routeFetch(() => json({ items: [], total: 0 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ProductsPage />);
+    expect(await screen.findByText("No products match your filters.")).toBeInTheDocument();
+    const listCalls = fetchMock.mock.calls.map((c) => String(c[0])).filter((u) => u.includes("/catalog/products"));
+    expect(listCalls).toHaveLength(1);
+    expect(listCalls[0]).toContain("category=serum");
+    expect(await screen.findByRole("button", { name: "Serum" })).toHaveAttribute("aria-pressed", "true");
+    window.history.pushState({}, "", "/");
   });
 });
