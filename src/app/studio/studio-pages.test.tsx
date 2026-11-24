@@ -70,7 +70,24 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+vi.mock("@/lib/auth", () => ({ useAuth: () => ({ user: null, loading: false }) }));
+
 describe("Beauty Studio intro", () => {
+  it("shows the AI-first options before the guided questions, plus browsing and safety", () => {
+    render(<StudioIntroPage />);
+    const talk = screen.getByRole("link", { name: /Talk to AI/ });
+    const scan = screen.getByRole("link", { name: /Face Scan/ });
+    const discover = screen.getByRole("heading", { name: "Help Me Discover" });
+    expect(talk).toHaveAttribute("href", "/assistant");
+    expect(scan).toHaveAttribute("href", "/register?next=/analyze");
+    expect(screen.getByText(/Demo only, not a skin analysis/)).toBeInTheDocument();
+    // Document order: Talk to AI, Face Scan, then Help Me Discover.
+    expect(talk.compareDocumentPosition(scan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(scan.compareDocumentPosition(discover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Browse products instead" })).toHaveAttribute("href", "/products");
+    expect(screen.getByText(/not medical advice/)).toBeInTheDocument();
+  });
+
   it("starts the assessment, or resumes saved answers", async () => {
     const { unmount } = render(<StudioIntroPage />);
     expect(screen.getByRole("link", { name: "Start the assessment" })).toHaveAttribute("href", "/studio/assessment");

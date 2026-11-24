@@ -38,7 +38,7 @@ export function BottomNav() {
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold transition ${
+                className={`relative flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 px-0.5 text-center text-[10.5px] font-semibold leading-tight transition ${
                   active ? "text-rose-700" : "text-brand-500 hover:text-brand-800"
                 }`}
               >

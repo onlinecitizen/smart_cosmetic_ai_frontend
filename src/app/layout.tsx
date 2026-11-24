@@ -35,7 +35,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
-      <body className="flex min-h-screen flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <body className="flex min-h-screen flex-col pb-[calc(4rem+1px+env(safe-area-inset-bottom))] lg:pb-0">
         <a href="#main" className="skip-link">
           Skip to content
         </a>

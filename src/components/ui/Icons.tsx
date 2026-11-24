@@ -145,3 +145,13 @@ export function SproutIcon({ className = "h-8 w-8" }: IconProps) {
     </svg>
   );
 }
+
+/** Checklist, for the guided five-question discovery. */
+export function ChecklistIcon({ className = "h-6 w-6" }: IconProps) {
+  return (
+    <svg {...base} className={className} strokeWidth="1.8">
+      <path d="M10 6.5h9M10 12h9M10 17.5h9" />
+      <path d="m4 6.5 1.3 1.3L7.5 5.5M4 12l1.3 1.3L7.5 11M4 17.5l1.3 1.3 2.2-2.3" />
+    </svg>
+  );
+}

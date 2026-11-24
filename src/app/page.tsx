@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AccountDeletedNotice } from "@/components/AccountDeletedNotice";
+import { FeatureCard } from "@/components/landing/FeatureCard";
 import { HeroVisual } from "@/components/landing/HeroVisual";
 import { useAssessmentHref } from "@/components/Navbar";
 import { ArrowRightIcon, BagIcon, MessageIcon, MicIcon, ScanIcon, SparkleIcon, SproutIcon } from "@/components/ui/Icons";
@@ -35,46 +36,6 @@ function useHeroProducts() {
   return items;
 }
 
-function FeatureCard({
-  href,
-  icon,
-  title,
-  body,
-  note,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-  note?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group relative flex items-center gap-4 overflow-hidden rounded-[1.75rem] border border-rose-line bg-white/80 p-5 shadow-rose backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-white active:translate-y-0 sm:gap-6 sm:p-7 lg:min-h-[200px]"
-    >
-      {/* soft wave along the bottom edge, as in the reference */}
-      <svg aria-hidden viewBox="0 0 400 60" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-12 w-full text-rose-100 sm:h-14">
-        <path d="M0 30C80 0 150 55 240 34s120-30 160-14v40H0z" fill="currentColor" />
-      </svg>
-      <span className="relative grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-600 to-rose-950 text-white shadow-cta sm:h-24 sm:w-24 lg:h-[116px] lg:w-[116px]">
-        {icon}
-      </span>
-      <span className="relative min-w-0 flex-1">
-        <span className="block font-display text-[1.6rem] font-semibold leading-tight text-ink sm:text-[2rem] lg:text-[2.35rem]">{title}</span>
-        <span className="mt-1.5 block max-w-xs text-[15px] leading-snug text-brand-600 sm:text-[17px]">{body}</span>
-        {note && <span className="mt-2 inline-block rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">{note}</span>}
-      </span>
-      <span
-        aria-hidden
-        className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-rose-100 text-ink transition group-hover:translate-x-1 group-hover:bg-rose-200 sm:h-14 sm:w-14"
-      >
-        <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-      </span>
-    </Link>
-  );
-}
-
 export default function HomePage() {
   const products = useHeroProducts();
   const scanHref = useAssessmentHref();
@@ -85,7 +46,7 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-b from-white via-rose-50 to-rose-50">
-        <div className="mx-auto grid max-w-[1240px] items-center gap-4 px-5 pb-6 pt-4 sm:px-8 lg:min-h-[500px] lg:grid-cols-[46fr_54fr] lg:gap-6 lg:px-12 lg:pb-0 lg:pt-0">
+        <div className="mx-auto grid max-w-[1240px] items-center gap-3 px-5 pb-2 pt-3 sm:px-8 lg:min-h-[500px] lg:grid-cols-[46fr_54fr] lg:gap-6 lg:px-12 lg:pb-0 lg:pt-0">
           <div className="relative z-10 lg:py-14">
             <h1 className="font-display text-[2.6rem] font-bold leading-[1.02] tracking-tight text-ink sm:text-[3.4rem] lg:text-[3.75rem] xl:text-[4.5rem]">
               Discover Your
@@ -94,13 +55,13 @@ export default function HomePage() {
             <p className="mt-5 max-w-[500px] text-[17px] leading-[1.45] text-brand-700 sm:text-[20px] lg:text-[21px]">
               Powered by AI, our Beauty Studio helps you discover your beauty goals and explore suitable products.
             </p>
-            <Link href="/studio" className="btn-hero mt-7 w-full max-w-[400px] sm:w-auto sm:min-w-[340px] lg:h-[68px] lg:w-[400px]">
+            <Link href="/studio" className="btn-hero mt-6 w-full max-w-[400px] sm:w-auto sm:min-w-[340px] lg:h-[68px] lg:w-[400px]">
               <SparkleIcon className="h-5 w-5" />
               Start Your Beauty Journey
               <ArrowRightIcon className="h-5 w-5" />
             </Link>
           </div>
-          <div className="relative -mx-5 h-[280px] sm:-mx-8 sm:h-[380px] lg:mx-0 lg:h-[500px]">
+          <div className="relative -mx-5 h-[210px] sm:-mx-8 sm:h-[380px] lg:mx-0 lg:h-[500px]">
             <HeroVisual products={products} />
           </div>
         </div>
@@ -120,7 +81,7 @@ export default function HomePage() {
             icon={<ScanIcon className="h-9 w-9 sm:h-11 sm:w-11 lg:h-14 lg:w-14" />}
             title="Face Scan"
             body="Use your camera to explore visible skin characteristics."
-            note={SITE_STATUS.skinScoresAreDemo ? "Demonstration: results are not a skin analysis" : undefined}
+            note={SITE_STATUS.skinScoresAreDemo ? "Demo only, not a skin analysis" : undefined}
           />
         </div>
       </section>

@@ -39,7 +39,7 @@ describe("Homepage", () => {
   it("labels the face scan as a demonstration and makes no precision claims", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
     const { container } = render(<HomePage />);
-    expect(screen.getByText(/Demonstration: results are not a skin analysis/)).toBeInTheDocument();
+    expect(screen.getByText(/Demo only, not a skin analysis/)).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/precise|diagnos|%/i);
   });
 });
