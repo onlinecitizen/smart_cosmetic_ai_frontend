@@ -3,196 +3,181 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AccountDeletedNotice } from "@/components/AccountDeletedNotice";
-import { ProductTile } from "@/components/catalog/ProductTile";
-import { EditorialVisual } from "@/components/editorial/EditorialVisual";
-import { ChevronIcon, SearchIcon } from "@/components/ui/Icons";
-import { mediaUrl } from "@/lib/api";
-import { CatalogProduct, Option, catalogApi, groupOf, labeller } from "@/lib/catalog";
-import { MessageKey, useT } from "@/lib/i18n";
-import { useCatalogOptions } from "@/lib/useCatalogOptions";
+import { HeroVisual } from "@/components/landing/HeroVisual";
+import { useAssessmentHref } from "@/components/Navbar";
+import { ArrowRightIcon, BagIcon, MessageIcon, MicIcon, ScanIcon, SparkleIcon, SproutIcon } from "@/components/ui/Icons";
+import { CatalogProduct, catalogApi } from "@/lib/catalog";
+import { SITE_STATUS } from "@/lib/siteStatus";
 
-// Every statement here describes what the application does today (DESIGN.md
-// "Copy rules"). Do not add claims without matching backend behaviour.
-const HOW: [MessageKey, MessageKey][] = [
-  ["home.how.1.title", "home.how.1.body"],
-  ["home.how.2.title", "home.how.2.body"],
-  ["home.how.3.title", "home.how.3.body"],
-  ["home.how.4.title", "home.how.4.body"],
-];
-const TRUST: [MessageKey, MessageKey][] = [
-  ["home.trust.1.title", "home.trust.1.body"],
-  ["home.trust.2.title", "home.trust.2.body"],
-  ["home.trust.3.title", "home.trust.3.body"],
-];
-const TILE_TONES = ["bg-blush-50", "bg-teal-50", "bg-gold-100/70", "bg-peach-100"];
+// Landing page from the design pack (references/00_PRIMARY_REFERENCE_EXACT_HOME_DESIGN.png,
+// SCREEN_BY_SCREEN_SPEC.md §01). Every statement describes what the application does
+// today: no scores, precision claims or invented product facts.
 
-/** A few products from the catalogue (real listings only; nothing is invented). */
-function useLatestProducts(limit: number) {
+const STEPS = [
+  { icon: MessageIcon, title: "Share Your Needs", body: "By voice, text or a few questions" },
+  { icon: SparkleIcon, title: "Get Personalized Guidance", body: "Each match says why it fits" },
+  { icon: BagIcon, title: "Explore Suitable Products", body: "Listed by partner shops" },
+];
+
+/** A few catalogue photos for the hero visual (real listings only). */
+function useHeroProducts() {
   const [items, setItems] = useState<CatalogProduct[] | null>(null);
   useEffect(() => {
     let cancelled = false;
     catalogApi
-      .list({ limit, sort: "recent" })
+      .list({ limit: 3, sort: "recent" })
       .then((page) => !cancelled && setItems(Array.isArray(page?.items) ? page.items : []))
       .catch(() => !cancelled && setItems([]));
     return () => {
       cancelled = true;
     };
-  }, [limit]);
+  }, []);
   return items;
 }
 
+function FeatureCard({
+  href,
+  icon,
+  title,
+  body,
+  note,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  note?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group relative flex items-center gap-4 overflow-hidden rounded-[1.75rem] border border-rose-line bg-white/80 p-5 shadow-rose backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-white active:translate-y-0 sm:gap-6 sm:p-7 lg:min-h-[200px]"
+    >
+      {/* soft wave along the bottom edge, as in the reference */}
+      <svg aria-hidden viewBox="0 0 400 60" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-12 w-full text-rose-100 sm:h-14">
+        <path d="M0 30C80 0 150 55 240 34s120-30 160-14v40H0z" fill="currentColor" />
+      </svg>
+      <span className="relative grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-600 to-rose-950 text-white shadow-cta sm:h-24 sm:w-24 lg:h-[116px] lg:w-[116px]">
+        {icon}
+      </span>
+      <span className="relative min-w-0 flex-1">
+        <span className="block font-display text-[1.6rem] font-semibold leading-tight text-ink sm:text-[2rem] lg:text-[2.35rem]">{title}</span>
+        <span className="mt-1.5 block max-w-xs text-[15px] leading-snug text-brand-600 sm:text-[17px]">{body}</span>
+        {note && <span className="mt-2 inline-block rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">{note}</span>}
+      </span>
+      <span
+        aria-hidden
+        className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-rose-100 text-ink transition group-hover:translate-x-1 group-hover:bg-rose-200 sm:h-14 sm:w-14"
+      >
+        <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+      </span>
+    </Link>
+  );
+}
+
 export default function HomePage() {
-  const { t } = useT();
-  const { options } = useCatalogOptions();
-  const products = useLatestProducts(6);
-  const label = labeller(options?.categories);
-  const tree = options?.category_tree;
-  const categories: Option[] = tree && tree.length > 0 ? tree.map(({ code, label }) => ({ code, label })) : options?.categories ?? [];
-  const groupLabel = (code: string) => groupOf(tree, code)?.label ?? label(code);
-  // Hero visual: real product photos from the catalogue when there are any, else the decorative illustration.
-  const heroPhotos = (products ?? []).flatMap((p) => (mediaUrl(p.images?.[0]?.url) ? [p] : [])).slice(0, 3);
-  const anyDemo = (products ?? []).some((p) => p.is_test_fixture);
+  const products = useHeroProducts();
+  const scanHref = useAssessmentHref();
 
   return (
     <>
       <AccountDeletedNotice />
 
-      <div className="mx-auto max-w-6xl px-4 pt-2 sm:px-6 sm:pt-6">
-        <Link
-          href="/products"
-          className="flex items-center gap-3 rounded-full border border-peach-200 bg-white px-4 py-3 text-[15px] text-brand-400 shadow-tile transition hover:border-peach-300 lg:hidden"
-        >
-          <SearchIcon className="h-[18px] w-[18px] text-brand-500" />
-          Search products or brands
-        </Link>
-
-        <section className="mt-4 overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-peach-100 via-blush-50 to-peach-200 sm:mt-0">
-          <div className="grid items-center gap-2 p-5 sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10 lg:p-12">
-            <div>
-              <p className="eyebrow">{t("home.eyebrow")}</p>
-              <h1 className="display mt-3 text-[2.15rem] leading-[1.06] sm:text-5xl lg:text-[3.6rem]">{t("home.title")}</h1>
-              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-brand-600 sm:text-base">{t("home.lead")}</p>
-              <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
-                <Link href="/studio" className="btn-studio !py-3.5 sm:!px-8">
-                  {t("home.cta.routine")}
-                </Link>
-                <Link href="/products" className="btn-secondary !bg-white/80 !py-3.5 sm:!px-8">
-                  {t("home.cta.products")}
-                </Link>
-              </div>
-              <p className="mt-3 text-xs text-brand-500">{t("home.note")}</p>
-            </div>
-
-            {heroPhotos.length === 3 ? (
-              <div aria-hidden className="relative mx-auto mt-4 grid h-[180px] w-full max-w-md grid-cols-3 items-end gap-2 sm:h-[300px] lg:mt-0 lg:h-[380px]">
-                {heroPhotos.map((p, i) => (
-                  <div key={p.id} className={`overflow-hidden rounded-3xl bg-white shadow-tile ${i === 1 ? "h-full" : "h-[82%]"}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={mediaUrl(p.images?.[0]?.url) ?? undefined} alt="" className="h-full w-full object-cover" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EditorialVisual variant="hero" className="mt-4 h-[220px] sm:h-[320px] lg:mt-0 lg:h-[380px]" />
-            )}
-          </div>
-        </section>
-      </div>
-
-      {categories.length > 0 && (
-        <section aria-labelledby="categories-heading" className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
-          <div className="flex items-end justify-between gap-3">
-            <h2 id="categories-heading" className="display text-2xl sm:text-3xl">
-              {t("home.categories")}
-            </h2>
-            <p className="hidden text-sm text-brand-600 sm:block">{t("home.categories.lead")}</p>
-          </div>
-          <ul className="no-scrollbar -mx-4 mt-3 flex gap-2.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-6">
-            {categories.map((c, i) => (
-              <li key={c.code} className="shrink-0">
-                <Link
-                  href={`/products?category=${encodeURIComponent(c.code)}`}
-                  className={`group flex h-20 w-32 flex-col justify-between rounded-2xl border border-peach-200/80 p-3.5 transition hover:-translate-y-0.5 hover:shadow-tile sm:w-auto ${TILE_TONES[i % TILE_TONES.length]}`}
-                >
-                  <span className="display text-lg leading-tight text-brand-900">{c.label}</span>
-                  <span aria-hidden className="self-end text-brand-500 transition group-hover:translate-x-0.5">
-                    <ChevronIcon />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {products && products.length > 0 && (
-        <section aria-labelledby="latest-heading" className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
-          <div className="flex items-end justify-between gap-3">
-            <h2 id="latest-heading" className="display text-2xl sm:text-3xl">
-              From the catalogue
-            </h2>
-            <Link href="/products" className="text-sm font-semibold text-teal-700 hover:text-teal-900">
-              See all
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-rose-50 to-rose-50">
+        <div className="mx-auto grid max-w-[1240px] items-center gap-4 px-5 pb-6 pt-4 sm:px-8 lg:min-h-[500px] lg:grid-cols-[46fr_54fr] lg:gap-6 lg:px-12 lg:pb-0 lg:pt-0">
+          <div className="relative z-10 lg:py-14">
+            <h1 className="font-display text-[2.6rem] font-bold leading-[1.02] tracking-tight text-ink sm:text-[3.4rem] lg:text-[3.75rem] xl:text-[4.5rem]">
+              Discover Your
+              <span className="block text-rose-700">Natural Beauty</span>
+            </h1>
+            <p className="mt-5 max-w-[500px] text-[17px] leading-[1.45] text-brand-700 sm:text-[20px] lg:text-[21px]">
+              Powered by AI, our Beauty Studio helps you discover your beauty goals and explore suitable products.
+            </p>
+            <Link href="/studio" className="btn-hero mt-7 w-full max-w-[400px] sm:w-auto sm:min-w-[340px] lg:h-[68px] lg:w-[400px]">
+              <SparkleIcon className="h-5 w-5" />
+              Start Your Beauty Journey
+              <ArrowRightIcon className="h-5 w-5" />
             </Link>
           </div>
-          {anyDemo && (
-            <p className="mt-1 text-xs text-brand-500">
-              Products marked “Demo” are sample listings for design review. Their prices and stock are not real.
-            </p>
-          )}
-          <ul className="mt-3 grid grid-cols-2 gap-3 max-[299px]:grid-cols-1 sm:gap-4 md:grid-cols-3">
-            {products.map((p) => (
-              <li key={p.id}>
-                <ProductTile product={p} groupLabel={groupLabel(p.category)} headingLevel="h3" />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
-        <Link
-          href="/studio"
-          className="group flex items-center justify-between gap-4 rounded-[1.75rem] bg-teal-700 p-5 text-white shadow-soft transition hover:bg-teal-900 sm:p-7"
-        >
-          <span>
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.24em] text-teal-100">Beauty Studio</span>
-            <span className="display mt-1 block text-2xl !text-white sm:text-3xl">{t("home.cta.routine")}</span>
-            <span className="mt-1 block text-sm text-teal-50/90">{t("home.note")}</span>
-          </span>
-          <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/15 transition group-hover:translate-x-0.5">
-            <ChevronIcon className="h-5 w-5" />
-          </span>
-        </Link>
+          <div className="relative -mx-5 h-[280px] sm:-mx-8 sm:h-[380px] lg:mx-0 lg:h-[500px]">
+            <HeroVisual products={products} />
+          </div>
+        </div>
       </section>
 
-      <section id="how" aria-labelledby="how-heading" className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
-        <h2 id="how-heading" className="display text-2xl sm:text-3xl">
-          {t("home.how")}
-        </h2>
-        <ol className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {HOW.map(([title, body], i) => (
-            <li key={title} className="flex gap-3 rounded-2xl border border-peach-200/80 bg-white p-4 shadow-tile">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-teal-50 text-sm font-semibold text-teal-700">{i + 1}</span>
-              <div>
-                <h3 className="font-semibold text-brand-900">{t(title)}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-brand-600">{t(body)}</p>
-              </div>
+      {/* Two feature cards */}
+      <section id="features" aria-label="Ways to start" className="mx-auto max-w-[1240px] scroll-mt-24 px-5 pt-6 sm:px-8 lg:-mt-6 lg:px-12">
+        <div className="relative z-10 grid gap-4 lg:grid-cols-2 lg:gap-6">
+          <FeatureCard
+            href="/assistant"
+            icon={<MicIcon className="h-9 w-9 sm:h-11 sm:w-11 lg:h-14 lg:w-14" />}
+            title="Talk to AI"
+            body="Talk to your personal AI to describe your beauty goals."
+          />
+          <FeatureCard
+            href={scanHref}
+            icon={<ScanIcon className="h-9 w-9 sm:h-11 sm:w-11 lg:h-14 lg:w-14" />}
+            title="Face Scan"
+            body="Use your camera to explore visible skin characteristics."
+            note={SITE_STATUS.skinScoresAreDemo ? "Demonstration: results are not a skin analysis" : undefined}
+          />
+        </div>
+      </section>
+
+      {/* Three steps */}
+      <section aria-labelledby="journey-heading" className="mx-auto max-w-[1240px] px-5 pt-12 sm:px-8 lg:px-12 lg:pt-14">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-transparent to-rose-300" />
+          <h2 id="journey-heading" className="text-center font-display text-[1.5rem] font-semibold leading-tight text-ink sm:text-[1.9rem]">
+            Your Beauty Journey in 3 Simple Steps
+          </h2>
+          <span aria-hidden className="h-px flex-1 bg-gradient-to-l from-transparent to-rose-300" />
+        </div>
+        <ol className="mt-7 grid gap-4 sm:grid-cols-3 sm:gap-2">
+          {STEPS.map(({ icon: Icon, title, body }, i) => (
+            <li key={title} className="relative flex items-center gap-4 sm:flex-col sm:gap-0 sm:text-center">
+              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-rose-100 text-rose-700 sm:h-[100px] sm:w-[100px]">
+                <Icon className="h-8 w-8 [&_*]:[stroke-width:2.2] sm:h-12 sm:w-12" />
+              </span>
+              <span>
+                <span className="block font-display text-[1.2rem] font-semibold text-ink sm:mt-4 sm:text-[1.35rem]">
+                  {i + 1}. {title}
+                </span>
+                <span className="mt-0.5 block text-[15px] text-brand-600 sm:text-[16px]">{body}</span>
+              </span>
+              {i < STEPS.length - 1 && (
+                <ArrowRightIcon className="absolute -right-4 top-[42px] hidden h-7 w-7 text-rose-500/80 sm:block lg:-right-6" />
+              )}
             </li>
           ))}
         </ol>
       </section>
 
-      <section aria-label="What you can rely on" className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <ul className="grid gap-5 rounded-[1.75rem] bg-peach-100/70 p-5 sm:grid-cols-3 sm:p-8">
-          {TRUST.map(([title, body]) => (
-            <li key={title}>
-              <p className="font-semibold text-brand-900">{t(title)}</p>
-              <p className="mt-1 text-sm leading-relaxed text-brand-600">{t(body)}</p>
-            </li>
-          ))}
-        </ul>
+      {/* Banner */}
+      <section aria-labelledby="banner-heading" className="mx-auto max-w-[1240px] px-5 pb-12 pt-12 sm:px-8 lg:px-12 lg:pt-14">
+        <div className="relative flex flex-col items-start gap-5 overflow-hidden rounded-[1.75rem] border border-rose-line bg-gradient-to-r from-rose-100 via-rose-50 to-rose-100 p-6 shadow-rose sm:p-8 lg:min-h-[145px] lg:flex-row lg:items-center lg:gap-6 lg:pl-56">
+          <svg aria-hidden viewBox="0 0 160 120" className="pointer-events-none absolute -left-4 -top-2 hidden h-36 w-48 lg:block">
+            <g fill="#5E8B3A">
+              <path d="M10 110C40 80 70 60 120 52" stroke="#6B4F2A" strokeWidth="2" fill="none" />
+              <path d="M40 86C30 60 38 30 62 14c10 26 6 52-22 72z" opacity=".9" />
+              <path d="M70 66c2-26 20-46 48-50-2 26-20 44-48 50z" fill="#7BA84A" />
+              <path d="M96 56c16-14 38-18 58-8-14 14-36 16-58 8z" />
+              <path d="M28 98C10 88 2 70 4 52c18 8 26 26 24 46z" fill="#7BA84A" />
+            </g>
+          </svg>
+          <SproutIcon className="hidden h-11 w-11 shrink-0 text-rose-700 lg:block" />
+          <div className="flex-1">
+            <h2 id="banner-heading" className="font-display text-[1.6rem] font-semibold leading-tight text-ink sm:text-[2rem]">
+              Your Beauty. Our Care.
+            </h2>
+            <p className="mt-1 text-[15px] text-brand-600 sm:text-[17px]">Smarter discovery. More confident choices.</p>
+          </div>
+          <Link href="/products" className="btn-hero w-full shrink-0 sm:w-auto sm:min-w-[260px]">
+            Explore Products
+            <ArrowRightIcon className="h-5 w-5" />
+          </Link>
+        </div>
       </section>
     </>
   );

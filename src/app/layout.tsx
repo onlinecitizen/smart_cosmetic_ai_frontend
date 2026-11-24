@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { Manrope, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { Navbar } from "@/components/Navbar";
@@ -7,10 +7,11 @@ import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import { I18nProvider } from "@/lib/i18n";
 
-const display = Cormorant_Garamond({
+// Editorial serif for headings (design pack: "elegant editorial serif"). Self-hosted by
+// next/font at build time; SIL Open Font License.
+const display = Playfair_Display({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  weight: ["500", "600", "700"],
   variable: "--font-display",
   display: "swap",
 });
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FDF6F1",
+  themeColor: "#FFF5F9",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

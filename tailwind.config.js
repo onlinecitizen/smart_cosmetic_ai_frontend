@@ -46,6 +46,22 @@ module.exports = {
           200: "#F4DCCD",
           300: "#EBC4AE",
         },
+        // Smart Cosmetic AI rose palette (design pack DESIGN_SYSTEM.md "Color tokens").
+        // Saturated shades (600-800) are for primary actions and highlights only;
+        // 700+ are the shades used for text (>= 4.5:1 on rose-50 and white).
+        rose: {
+          50: "#FFF5F9",
+          100: "#FDE8F2",
+          200: "#FBD0E5",
+          300: "#F8A8D0",
+          line: "#F4C7DD",
+          500: "#F52D8C",
+          600: "#EC1479",
+          700: "#D90A68",
+          800: "#BD0757",
+          950: "#8E003E",
+        },
+        ink: "#21131A",
         teal: {
           50: "#EEF6F5",
           100: "#D9ECEA",
@@ -63,6 +79,8 @@ module.exports = {
         soft: "0 1px 2px rgba(28,26,23,0.04), 0 12px 32px -12px rgba(28,26,23,0.12)",
         lift: "0 2px 4px rgba(28,26,23,0.05), 0 24px 60px -20px rgba(28,26,23,0.25)",
         tile: "0 1px 2px rgba(120,72,48,0.06), 0 8px 20px -12px rgba(120,72,48,0.22)",
+        rose: "0 10px 28px rgba(184,25,96,0.10)",
+        cta: "0 12px 26px -10px rgba(189,7,87,0.55)",
       },
     },
   },

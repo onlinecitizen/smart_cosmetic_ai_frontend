@@ -28,7 +28,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label={t("nav.tabs")}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-peach-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-16px_rgba(120,72,48,0.35)] backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-rose-line bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-16px_rgba(184,25,96,0.30)] backdrop-blur-xl lg:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {tabs.map((tab) => {
@@ -39,10 +39,10 @@ export function BottomNav() {
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={`relative flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold transition ${
-                  active ? "text-teal-700" : "text-brand-500 hover:text-brand-800"
+                  active ? "text-rose-700" : "text-brand-500 hover:text-brand-800"
                 }`}
               >
-                {active && <span aria-hidden className="absolute top-0 h-0.5 w-8 rounded-full bg-teal-700" />}
+                {active && <span aria-hidden className="absolute top-0 h-0.5 w-8 rounded-full bg-rose-700" />}
                 <svg
                   viewBox="0 0 24 24"
                   className="h-[22px] w-[22px]"

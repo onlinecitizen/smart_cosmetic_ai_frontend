@@ -16,26 +16,31 @@ vi.mock("next/link", () => ({
 }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => ({ user: null, loading: false }) }));
 
-const OPTIONS = { categories: [{ code: "serum", label: "Serum" }], skin_types: [], concerns: [], avoid_groups: [], availability: [] };
 function json(body: unknown) {
   return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
 }
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Homepage", () => {
-  it("has the two primary actions and category tiles from the catalogue vocabulary", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json(OPTIONS)));
+  it("follows the reference: hero, two feature cards, three steps and the products banner", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json({ items: [], total: 0 })));
     render(<HomePage />);
-    expect(screen.getAllByRole("link", { name: "Discover My Routine" })[0]).toHaveAttribute("href", "/studio");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Discover YourNatural Beauty");
+    expect(screen.getByRole("link", { name: "Start Your Beauty Journey" })).toHaveAttribute("href", "/studio");
+    expect(screen.getByRole("link", { name: /Talk to AI/ })).toHaveAttribute("href", "/assistant");
+    // Signed out: the camera page asks for an account first.
+    expect(screen.getByRole("link", { name: /Face Scan/ })).toHaveAttribute("href", "/register?next=/analyze");
+    expect(screen.getByText(/Share Your Needs/)).toBeInTheDocument();
+    expect(screen.getByText(/Get Personalized Guidance/)).toBeInTheDocument();
+    expect(screen.getByText(/Explore Suitable Products/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Explore Products" })).toHaveAttribute("href", "/products");
-    expect(await screen.findByRole("link", { name: /Serum/ })).toHaveAttribute("href", "/products?category=serum");
   });
 
-  it("hides the category section if the vocabulary can't load", async () => {
+  it("labels the face scan as a demonstration and makes no precision claims", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
-    render(<HomePage />);
-    expect(screen.getByRole("link", { name: "Explore Products" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Browse by category" })).not.toBeInTheDocument();
+    const { container } = render(<HomePage />);
+    expect(screen.getByText(/Demonstration: results are not a skin analysis/)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/precise|diagnos|%/i);
   });
 });
 

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronIcon, LotusMark, UserIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/auth";
 import { LanguageSwitch, useT } from "@/lib/i18n";
 
@@ -32,8 +33,26 @@ export function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    setOpen(false);
+    setMenu(false);
+  }, [pathname]);
+
+  // Account menu: close on outside click or Escape.
+  useEffect(() => {
+    if (!menu) return;
+    const onDown = (e: MouseEvent) => menuRef.current && !menuRef.current.contains(e.target as Node) && setMenu(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false);
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menu]);
 
   useEffect(() => {
     if (!open) return;
@@ -52,8 +71,25 @@ export function Navbar() {
   async function onLogout() {
     await logout();
     setOpen(false);
+    setMenu(false);
     router.push("/");
   }
+
+  // Desktop links, as in the design reference (Home, Features, Products, ...). The
+  // reference's "Contact" is left out until real contact details exist.
+  const desktop: { href: string; label: string; match?: false }[] = [
+    { href: "/", label: t("nav.home") },
+    { href: "/#features", label: "Features", match: false },
+    { href: "/products", label: t("nav.products") },
+    { href: "/saved", label: "Saved" },
+  ];
+  const accountMenu = user
+    ? [
+        { href: "/studio", label: t("nav.studio") },
+        { href: "/assistant", label: t("nav.assistant") },
+        { href: "/order-requests", label: t("nav.requests") },
+      ]
+    : [];
 
   const main = [
     { href: "/studio", label: t("nav.studio") },
@@ -77,103 +113,102 @@ export function Navbar() {
   return (
     <header
       className={`sticky top-0 z-40 transition-all duration-500 ${
-        scrolled || open ? "border-b border-peach-200/80 bg-peach-50/90 backdrop-blur-xl" : "bg-transparent"
+        scrolled || open ? "border-b border-rose-line/70 bg-white/85 backdrop-blur-xl" : "bg-transparent"
       }`}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-4 py-3 sm:px-8 lg:min-h-[88px] lg:px-12">
         <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Smart Cosmetic AI home">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-gold-500/50 bg-white shadow-tile">
-            <span className="h-3.5 w-3.5 rounded-full bg-gradient-to-br from-gold-300 to-gold-700" />
-          </span>
+          <LotusMark className="h-9 w-12 shrink-0 text-rose-700 lg:h-11 lg:w-14" />
           <span className="min-w-0 leading-tight">
-            <span className="block truncate font-display text-[17px] font-semibold tracking-[0.12em] text-brand-900">SMART COSMETIC AI</span>
-            <span className="block truncate text-[11px] text-brand-500">Beauty discovery · Zanzibar</span>
+            <span className="block truncate font-display text-[19px] font-bold text-ink lg:text-[24px]">Smart Cosmetic AI</span>
+            <span className="block truncate text-[11px] text-brand-600 lg:text-[13px]">Beauty Smarter. For You.</span>
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex" aria-label={t("nav.main")}>
-          {main.map((s) => (
-            <Link
-              key={s.href}
-              href={s.href}
-              aria-current={isActive(pathname, s.href) ? "page" : undefined}
-              className={`border-b-2 pb-1 text-[13px] transition hover:text-brand-900 ${
-                isActive(pathname, s.href) ? "border-gold-500 text-brand-900" : "border-transparent text-brand-600"
-              }`}
-            >
-              {s.label}
-            </Link>
-          ))}
+        <nav className="hidden items-center gap-1 lg:flex" aria-label={t("nav.main")}>
+          {desktop.map((s) => {
+            const active = s.match !== false && isActive(pathname, s.href);
+            return (
+              <Link
+                key={s.href}
+                href={s.href}
+                aria-current={active ? "page" : undefined}
+                className={`whitespace-nowrap rounded-full px-5 py-2.5 text-[15px] font-medium transition ${
+                  active ? "bg-rose-100 text-rose-950" : "text-ink hover:bg-rose-50"
+                }`}
+              >
+                {s.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="hidden items-center gap-5 lg:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitch />
-          <Link
-            href="/saved"
-            aria-current={isActive(pathname, "/saved") ? "page" : undefined}
-            className="text-[12px] text-brand-600 transition hover:text-brand-900"
-          >
-            Saved
-          </Link>
-          {!loading && user && (
-            <>
-              <Link
-                href="/account"
-                aria-current={isActive(pathname, "/account") ? "page" : undefined}
-                className="text-[12px] text-brand-600 transition hover:text-brand-900"
-              >
-                {t("nav.account")}
-              </Link>
-              <Link
-                href="/partner"
-                aria-current={isActive(pathname, "/partner") ? "page" : undefined}
-                className="text-[12px] text-brand-600 transition hover:text-brand-900"
-              >
-                For shops
-              </Link>
-              {user.role === "admin" && (
-                <Link href="/admin" className="text-[12px] text-brand-600 transition hover:text-brand-900">
-                  {t("nav.admin")}
-                </Link>
-              )}
-              <button onClick={onLogout} className="text-[12px] text-brand-600 transition hover:text-brand-900">
-                {t("nav.logout")}
-              </button>
-            </>
-          )}
           {!loading && !user && (
-            <Link href="/login" className="text-[12px] text-brand-600 transition hover:text-brand-900">
+            <Link
+              href="/login"
+              className="flex items-center gap-2 rounded-full border border-rose-line bg-white px-5 py-2.5 text-[14px] font-medium text-ink shadow-rose transition hover:border-rose-300"
+            >
+              <UserIcon className="h-5 w-5 text-rose-700" />
               {t("nav.login")}
             </Link>
           )}
-          <Link href="/studio" className="btn-studio !px-5 !py-2.5">
-            {t("nav.cta")}
-          </Link>
+          {!loading && user && (
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenu((m) => !m)}
+                aria-expanded={menu}
+                aria-controls="account-menu"
+                className="flex items-center gap-2 rounded-full border border-rose-line bg-white px-5 py-2.5 text-[14px] font-medium text-ink shadow-rose transition hover:border-rose-300"
+              >
+                <UserIcon className="h-5 w-5 text-rose-700" />
+                {t("nav.account")}
+                <ChevronIcon className={`h-4 w-4 transition ${menu ? "-rotate-90" : "rotate-90"}`} />
+              </button>
+              {menu && (
+                <div
+                  id="account-menu"
+                  className="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl border border-rose-line bg-white py-2 shadow-lift"
+                >
+                  {[...accountMenu, ...accountLinks].map((l) => (
+                    <Link key={l.href} href={l.href} className="block px-4 py-2.5 text-sm text-brand-700 hover:bg-rose-50 hover:text-ink">
+                      {l.label}
+                    </Link>
+                  ))}
+                  <button onClick={onLogout} className="block w-full border-t border-rose-line/70 px-4 py-2.5 text-left text-sm text-brand-700 hover:bg-rose-50">
+                    {t("nav.logout")}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <button
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-peach-200 bg-white shadow-tile lg:hidden"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-rose-line bg-white shadow-rose lg:hidden"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? t("nav.menu.close") : t("nav.menu.open")}
         >
           <span className="relative block h-3 w-4">
-            <span className={`absolute left-0 h-px w-4 bg-brand-900 transition-all duration-300 ${open ? "top-1.5 rotate-45" : "top-0"}`} />
-            <span className={`absolute left-0 h-px w-4 bg-brand-900 transition-all duration-300 ${open ? "top-1.5 -rotate-45" : "top-3"}`} />
+            <span className={`absolute left-0 h-px w-4 bg-ink transition-all duration-300 ${open ? "top-1.5 rotate-45" : "top-0"}`} />
+            <span className={`absolute left-0 h-px w-4 bg-ink transition-all duration-300 ${open ? "top-1.5 -rotate-45" : "top-3"}`} />
           </span>
         </button>
       </div>
 
       {open && (
-        <div id="mobile-menu" className="max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-brand-200/60 px-4 pb-8 pt-2 lg:hidden">
+        <div id="mobile-menu" className="max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-rose-line/70 px-4 pb-8 pt-2 lg:hidden">
           <nav className="flex flex-col" aria-label={t("nav.more")}>
             {[{ href: "/", label: t("nav.home") }, ...main, { href: "/saved", label: "Saved" }].map((s) => (
               <Link
                 key={s.href}
                 href={s.href}
                 aria-current={isActive(pathname, s.href) ? "page" : undefined}
-                className="display border-b border-brand-200/60 py-4 text-2xl"
+                className="display border-b border-rose-line/70 py-4 text-2xl"
               >
                 {s.label}
               </Link>

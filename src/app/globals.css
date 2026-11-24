@@ -12,7 +12,7 @@ body {
 }
 
 body {
-  @apply bg-peach-50 text-brand-900 font-sans antialiased;
+  @apply bg-rose-50 text-brand-900 font-sans antialiased;
 }
 
 /* Horizontal chip rows scroll without showing a scrollbar. */
@@ -86,9 +86,14 @@ body {
   @apply inline-flex items-center justify-center gap-2 rounded-full bg-gold-500 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-brand-900 shadow-soft transition-all duration-300 hover:bg-gold-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
 }
 
-/* Beauty Studio actions (teal). One per screen, next to at most one secondary. */
+/* Beauty Studio / primary actions (rose). One per screen, next to at most one secondary. */
 .btn-studio {
-  @apply inline-flex items-center justify-center gap-2 rounded-full bg-teal-700 px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-soft transition-all duration-300 hover:bg-teal-900 hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-rose-700 to-rose-950 px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-cta transition-all duration-300 hover:from-rose-800 hover:to-rose-950 hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Large rounded call to action (landing hero, banner). Sentence case, not uppercase. */
+.btn-hero {
+  @apply inline-flex min-h-[52px] items-center justify-center gap-3 rounded-full bg-gradient-to-r from-rose-700 to-rose-950 px-7 text-[16px] font-semibold text-white shadow-cta transition-all duration-300 hover:-translate-y-0.5 hover:from-rose-800 hover:shadow-lift active:translate-y-0 active:scale-[0.98] sm:text-[17px];
 }
 
 /* Large touch target for an answer in the assessment. Wraps a native input. */
