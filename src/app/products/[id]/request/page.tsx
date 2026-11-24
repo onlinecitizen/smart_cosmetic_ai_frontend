@@ -137,7 +137,7 @@ function RequestForm() {
       </Alert>
       {product.is_test_fixture && (
         <Alert tone="warning" className="mt-4">
-          This is a test fixture, not a real product. Any request for it is test data only.
+          This is a demo listing, not sold by a partner shop. Any request for it is test data only.
         </Alert>
       )}
 

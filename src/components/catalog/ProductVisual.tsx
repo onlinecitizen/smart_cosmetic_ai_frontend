@@ -28,12 +28,12 @@ export function ProductVisual({
   category: string;
   categoryLabel: string;
   size?: "card" | "detail";
-  image?: { url: string | null; alt_text: string | null } | null;
+  image?: { url: string | null; alt_text: string | null; licence_note?: string | null } | null;
   productName?: string;
 }) {
   const src = mediaUrl(image?.url);
   if (src) {
-    return (
+    const frame = (
       <div
         className={`relative overflow-hidden rounded-2xl bg-white ${size === "detail" ? "aspect-[4/3] sm:aspect-square" : "aspect-[16/9]"}`}
       >
@@ -46,6 +46,16 @@ export function ProductVisual({
         />
       </div>
     );
+    // The photo credit (licence attribution) is shown on the product page.
+    if (size === "detail" && image?.licence_note) {
+      return (
+        <figure>
+          {frame}
+          <figcaption className="mt-2 text-[11px] leading-snug text-brand-500">{image.licence_note}</figcaption>
+        </figure>
+      );
+    }
+    return frame;
   }
   return (
     <div

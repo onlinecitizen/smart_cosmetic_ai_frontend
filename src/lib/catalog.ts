@@ -45,7 +45,7 @@ export interface CatalogProduct {
   reviewed_at: string | null;
   retailer: CatalogRetailer;
   /** Displayable photos, main photo first (catalogue foundation; may be absent on old responses). */
-  images?: { id: string; url: string | null; alt_text: string | null; is_primary: boolean }[];
+  images?: { id: string; url: string | null; alt_text: string | null; is_primary: boolean; licence_note?: string | null }[];
   usage_instructions?: string | null;
   warnings?: string | null;
 }

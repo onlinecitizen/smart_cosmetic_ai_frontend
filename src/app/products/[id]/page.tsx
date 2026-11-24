@@ -72,7 +72,7 @@ export default function ProductDetailPage() {
 
         {product.is_test_fixture && (
           <Alert tone="warning" className="mt-6">
-            This is a test fixture used for development. It is not a real product and cannot be bought. Requests for it are test data only.
+            This is a demo listing for design review. It is not sold by a partner shop and cannot be bought. Requests for it are test data only.
           </Alert>
         )}
 
