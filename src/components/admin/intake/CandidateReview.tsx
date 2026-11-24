@@ -11,8 +11,9 @@ import {
   changedFieldValues,
   confidenceText,
   INTAKE_FIELDS,
+  IntakeApi,
   IntakeImage,
-  intakeApi,
+  intakeApi as adminIntakeApi,
   methodLabel,
   showValue,
   whereFound,
@@ -109,13 +110,19 @@ export function CandidateReview({
   images,
   onSaved,
   confirm,
+  api = adminIntakeApi,
+  productHref = (id: string) => `/admin/catalogue/${id}?tab=review`,
 }: {
   candidate: Candidate;
   categories: AdminCategory[];
   images: IntakeImage[];
   onSaved: (c: Candidate) => void;
   confirm: (r: ConfirmRequest) => void;
+  /** Admin intake API by default; a partner shop passes its own scoped API. */
+  api?: IntakeApi;
+  productHref?: (identityId: string) => string;
 }) {
+  const intakeApi = api;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [category, setCategory] = useState(candidate.category_code ?? "");
   const [attach, setAttach] = useState<string>(candidate.attach_to_identity_id ?? (candidate.allow_similar ? "__new__" : ""));
@@ -208,7 +215,7 @@ export function CandidateReview({
         <p className="alert alert-success text-sm">
           Submitted for approval.{" "}
           {candidate.identity_id && (
-            <a className="underline" href={`/admin/catalogue/${candidate.identity_id}?tab=review`}>
+            <a className="underline" href={productHref(candidate.identity_id)}>
               Open the product in the review queue
             </a>
           )}

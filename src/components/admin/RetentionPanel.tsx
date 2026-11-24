@@ -41,7 +41,8 @@ export function RetentionPanel() {
   }
 
   const nothingToDo =
-    preview && preview.order_requests_to_clear + preview.old_sessions + preview.old_reset_tokens === 0;
+    preview &&
+    preview.order_requests_to_clear + preview.old_sessions + preview.old_reset_tokens + (preview.idle_assistant_conversations ?? 0) === 0;
 
   return (
     <div className="card space-y-4 text-sm text-brand-700">
@@ -49,14 +50,15 @@ export function RetentionPanel() {
       <p>
         Removes customer contact details from order requests that were closed (declined, cancelled or completed) more
         than {preview?.retention_days ?? "the configured number of"} days ago, and deletes expired sign-in records and
-        old password-reset tokens. The requests themselves stay. Removed details can’t be recovered, except from a
+        old password-reset tokens and idle Beauty Assistant conversations. The requests themselves stay. Removed details can’t be recovered, except from a
         database backup. Each run is recorded in the audit log.
       </p>
       {error && <Alert tone="error">{error}</Alert>}
       {result && (
         <Alert tone="success">
           Done: contact details removed from {result.order_requests_to_clear} request(s); {result.old_sessions} sign-in
-          record(s) and {result.old_reset_tokens} reset token(s) deleted.
+          record(s), {result.old_reset_tokens} reset token(s) and {result.idle_assistant_conversations ?? 0} idle assistant
+          conversation(s) deleted.
         </Alert>
       )}
       {!preview ? (
@@ -67,6 +69,7 @@ export function RetentionPanel() {
             <li>Order requests to clear: {preview.order_requests_to_clear}</li>
             <li>Old sign-in records: {preview.old_sessions}</li>
             <li>Old password-reset tokens: {preview.old_reset_tokens}</li>
+            <li>Idle assistant conversations: {preview.idle_assistant_conversations ?? 0}</li>
           </ul>
           {nothingToDo ? (
             <p className="text-brand-500">Nothing to remove right now.</p>

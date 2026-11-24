@@ -58,6 +58,7 @@ export function Navbar() {
   const main = [
     { href: "/studio", label: t("nav.studio") },
     { href: "/products", label: t("nav.products") },
+    { href: "/assistant", label: t("nav.assistant") },
     ...(user ? [{ href: "/order-requests", label: t("nav.requests") }] : []),
   ];
 
@@ -66,6 +67,7 @@ export function Navbar() {
   const accountLinks = user
     ? [
         { href: "/account", label: t("nav.account") },
+        { href: "/partner", label: "Partner portal" },
         { href: "/dashboard", label: "My formulas (demo)" },
         { href: "/orders", label: "Serum orders (demo)" },
         ...(user.role === "admin" ? [{ href: "/admin", label: t("nav.admin") }] : []),
@@ -111,6 +113,13 @@ export function Navbar() {
                 className="text-[12px] text-brand-600 transition hover:text-brand-900"
               >
                 {t("nav.account")}
+              </Link>
+              <Link
+                href="/partner"
+                aria-current={isActive(pathname, "/partner") ? "page" : undefined}
+                className="text-[12px] text-brand-600 transition hover:text-brand-900"
+              >
+                For shops
               </Link>
               {user.role === "admin" && (
                 <Link href="/admin" className="text-[12px] text-brand-600 transition hover:text-brand-900">

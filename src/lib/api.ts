@@ -35,9 +35,9 @@ export class ApiError extends Error {
 
 async function request<T>(
   path: string,
-  options: { method?: string; body?: unknown; isForm?: boolean } = {}
+  options: { method?: string; body?: unknown; isForm?: boolean; signal?: AbortSignal } = {}
 ): Promise<T> {
-  const { method = "GET", body, isForm = false } = options;
+  const { method = "GET", body, isForm = false, signal } = options;
 
   const headers: Record<string, string> = {};
   if (!isForm && body !== undefined) {
@@ -53,6 +53,7 @@ async function request<T>(
     headers,
     credentials: "include",
     body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
+    signal,
   });
 
   if (res.status === 204) {
@@ -93,7 +94,8 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   del: <T = void>(path: string) => request<T>(path, { method: "DELETE" }),
-  postForm: <T>(path: string, form: FormData) => request<T>(path, { method: "POST", body: form, isForm: true }),
+  postForm: <T>(path: string, form: FormData, signal?: AbortSignal) =>
+    request<T>(path, { method: "POST", body: form, isForm: true, signal }),
 };
 
 // ---------- Types ----------

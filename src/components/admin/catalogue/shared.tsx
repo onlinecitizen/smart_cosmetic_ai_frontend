@@ -12,6 +12,8 @@ const NAV = [
   { href: "/admin/catalogue/new", label: "New product" },
   { href: "/admin/intake", label: "Import documents" },
   { href: "/admin/catalogue/categories", label: "Categories" },
+  { href: "/admin/partners", label: "Partners" },
+  { href: "/admin/assistant", label: "Assistant" },
   { href: "/admin", label: "Orders, audit and other admin" },
 ];
 

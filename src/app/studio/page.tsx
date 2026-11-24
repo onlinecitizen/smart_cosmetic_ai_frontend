@@ -28,6 +28,11 @@ export default function StudioIntroPage() {
             </li>
           ))}
         </ul>
+        <p className="mt-4 text-sm text-brand-600">
+          <Link href="/assistant" className="underline underline-offset-4">
+            {t("studio.voice")}
+          </Link>
+        </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           {hasProgress ? (

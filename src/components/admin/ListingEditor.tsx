@@ -28,7 +28,16 @@ type Listing = AdminCatalogProduct & { stock_quantity?: number | null };
  * sends the version it loaded, so a change made meanwhile by someone else is
  * refused instead of being overwritten.
  */
-export function ListingEditor({ product, onSaved }: { product: Listing; onSaved: () => void }) {
+export function ListingEditor({
+  product,
+  onSaved,
+  endpoint,
+}: {
+  product: Listing;
+  onSaved: () => void;
+  /** Defaults to the admin listing endpoint; partners pass their shop's offer endpoint. */
+  endpoint?: string;
+}) {
   const original = {
     price: product.price_amount != null ? String(product.price_amount) : "",
     currency: product.currency ?? "",
@@ -53,7 +62,7 @@ export function ListingEditor({ product, onSaved }: { product: Listing; onSaved:
     setBusy(true);
     setError(null);
     try {
-      await api.patch(`/api/v1/admin/catalog/products/${product.id}/listing`, {
+      await api.patch(endpoint ?? `/api/v1/admin/catalog/products/${product.id}/listing`, {
         ...body,
         expected_updated_at: product.updated_at,
       });

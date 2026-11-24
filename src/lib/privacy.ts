@@ -14,6 +14,8 @@ export interface RetentionReport {
   order_requests_to_clear: number;
   old_sessions: number;
   old_reset_tokens: number;
+  /** Beauty Assistant conversations (structured needs only) idle past their retention period. */
+  idle_assistant_conversations?: number;
 }
 
 export const privacyApi = {

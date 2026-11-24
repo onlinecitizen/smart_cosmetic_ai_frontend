@@ -141,10 +141,11 @@ export interface SubmitResult {
   notes: string[];
 }
 
-const BASE = "/api/v1/admin/intake";
 const enc = encodeURIComponent;
 
-export const intakeApi = {
+/** The intake API at a base path: the admin API, or one partner shop's scoped copy. */
+export function makeIntakeApi(BASE: string) {
+  return {
   capabilities: () => api.get<Capabilities>(`${BASE}/capabilities`),
   batches: () => api.get<Batch[]>(`${BASE}/batches`),
   createBatch: (body: { name: string; retailer_id: string | null }) => api.post<Batch>(`${BASE}/batches`, body),
@@ -166,7 +167,11 @@ export const intakeApi = {
     api.post<Candidate>(`${BASE}/candidates/${enc(id)}/${action}`, action === "reject" && reason ? { reason } : undefined),
   submit: (batchId: string, candidateIds?: string[]) =>
     api.post<{ results: SubmitResult[]; batch: Batch }>(`${BASE}/batches/${enc(batchId)}/submit`, candidateIds ? { candidate_ids: candidateIds } : undefined),
-};
+  };
+}
+
+export type IntakeApi = ReturnType<typeof makeIntakeApi>;
+export const intakeApi = makeIntakeApi("/api/v1/admin/intake");
 
 // ---------------------------------------------------------------- helpers
 

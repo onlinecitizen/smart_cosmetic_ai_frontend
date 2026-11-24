@@ -30,14 +30,24 @@ function usePreview(file: File | null): string | null {
   return url;
 }
 
+export interface ImageApi {
+  uploadImage: (identityId: string, form: FormData) => Promise<unknown>;
+  replaceImage: (imageId: string, form: FormData) => Promise<unknown>;
+  updateImage: (imageId: string, body: { is_primary?: true; alt_text?: string | null }) => Promise<unknown>;
+  reorderImages: (identityId: string, imageIds: string[]) => Promise<unknown>;
+  deleteImage: (imageId: string) => Promise<unknown>;
+}
+
 function UploadForm({
   identityId,
   disabled,
   onDone,
+  api,
 }: {
   identityId: string;
   disabled: boolean;
   onDone: () => void;
+  api: ImageApi;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [source, setSource] = useState("");
@@ -69,7 +79,7 @@ function UploadForm({
     setBusy(true);
     setError(null);
     try {
-      await adminCatalogApi.uploadImage(identityId, form);
+      await api.uploadImage(identityId, form);
       setFile(null);
       setReference("");
       setAlt("");
@@ -154,6 +164,7 @@ export function ImageGallery({
   locked,
   onChanged,
   confirm,
+  api = adminCatalogApi,
 }: {
   identityId: string;
   images: AdminImage[];
@@ -161,6 +172,8 @@ export function ImageGallery({
   locked: boolean;
   onChanged: () => void;
   confirm: (r: ConfirmRequest) => void;
+  /** Admin catalogue API by default; a partner shop passes its own scoped API. */
+  api?: ImageApi;
 }) {
   const sorted = [...images].sort((a, b) => a.position - b.position);
   const [order, setOrder] = useState(sorted.map((i) => i.id));
@@ -197,7 +210,7 @@ export function ImageGallery({
         const form = new FormData();
         form.set("file", file);
         try {
-          await adminCatalogApi.replaceImage(img.id, form);
+          await api.replaceImage(img.id, form);
         } catch (err) {
           throw new Error(adminError(err, "The photo could not be replaced."));
         }
@@ -216,7 +229,7 @@ export function ImageGallery({
       danger: true,
       onConfirm: async () => {
         try {
-          await adminCatalogApi.deleteImage(img.id);
+          await api.deleteImage(img.id);
         } catch (err) {
           throw new Error(adminError(err, "The photo could not be deleted."));
         }
@@ -286,7 +299,7 @@ export function ImageGallery({
                       className="underline"
                       disabled={locked || busy === img.id}
                       onClick={() =>
-                        run(img.id, () => adminCatalogApi.updateImage(img.id, { is_primary: true }), "Could not change the main photo.")
+                        run(img.id, () => api.updateImage(img.id, { is_primary: true }), "Could not change the main photo.")
                       }
                     >
                       Make main
@@ -323,7 +336,7 @@ export function ImageGallery({
             type="button"
             className="btn-primary"
             disabled={busy === "order"}
-            onClick={() => run("order", () => adminCatalogApi.reorderImages(identityId, order), "Could not save the order.")}
+            onClick={() => run("order", () => api.reorderImages(identityId, order), "Could not save the order.")}
           >
             Save photo order
           </button>
@@ -337,7 +350,7 @@ export function ImageGallery({
           {error}
         </p>
       )}
-      {uploadsEnabled && !locked && <UploadForm identityId={identityId} disabled={images.length >= 12} onDone={onChanged} />}
+      {uploadsEnabled && !locked && <UploadForm identityId={identityId} disabled={images.length >= 12} onDone={onChanged} api={api} />}
       {images.length >= 12 && <p className="text-sm text-brand-600">A product can have at most 12 photos.</p>}
     </div>
   );
