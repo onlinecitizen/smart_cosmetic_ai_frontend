@@ -77,15 +77,18 @@ export function Navbar() {
   return (
     <header
       className={`sticky top-0 z-40 transition-all duration-500 ${
-        scrolled || open ? "border-b border-brand-200/60 bg-brand-50/85 backdrop-blur-xl" : "bg-transparent"
+        scrolled || open ? "border-b border-peach-200/80 bg-peach-50/90 backdrop-blur-xl" : "bg-transparent"
       }`}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="Smart Cosmetic AI home">
-          <span className="grid h-7 w-7 place-items-center rounded-full border border-gold-500/60">
-            <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-gold-300 to-gold-700" />
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Smart Cosmetic AI home">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-gold-500/50 bg-white shadow-tile">
+            <span className="h-3.5 w-3.5 rounded-full bg-gradient-to-br from-gold-300 to-gold-700" />
           </span>
-          <span className="text-[13px] font-semibold tracking-[0.3em] text-brand-900">SMART COSMETIC AI</span>
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate font-display text-[17px] font-semibold tracking-[0.12em] text-brand-900">SMART COSMETIC AI</span>
+            <span className="block truncate text-[11px] text-brand-500">Beauty discovery · Zanzibar</span>
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-8 lg:flex" aria-label={t("nav.main")}>
@@ -105,6 +108,13 @@ export function Navbar() {
 
         <div className="hidden items-center gap-5 lg:flex">
           <LanguageSwitch />
+          <Link
+            href="/saved"
+            aria-current={isActive(pathname, "/saved") ? "page" : undefined}
+            className="text-[12px] text-brand-600 transition hover:text-brand-900"
+          >
+            Saved
+          </Link>
           {!loading && user && (
             <>
               <Link
@@ -142,7 +152,7 @@ export function Navbar() {
         </div>
 
         <button
-          className="grid h-10 w-10 place-items-center rounded-full border border-brand-200 bg-white/60 lg:hidden"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-peach-200 bg-white shadow-tile lg:hidden"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls="mobile-menu"
@@ -158,7 +168,7 @@ export function Navbar() {
       {open && (
         <div id="mobile-menu" className="max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-brand-200/60 px-4 pb-8 pt-2 lg:hidden">
           <nav className="flex flex-col" aria-label={t("nav.more")}>
-            {[{ href: "/", label: t("nav.home") }, ...main].map((s) => (
+            {[{ href: "/", label: t("nav.home") }, ...main, { href: "/saved", label: "Saved" }].map((s) => (
               <Link
                 key={s.href}
                 href={s.href}

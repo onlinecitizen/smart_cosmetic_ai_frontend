@@ -38,6 +38,14 @@ module.exports = {
           500: "#C98476",
           700: "#8E4A3F",
         },
+        // Warm blush-peach page surfaces (visual redesign, Screenshot B). Backgrounds
+        // and borders only; text stays on the brand scale for contrast.
+        peach: {
+          50: "#FDF6F1",
+          100: "#FAECE3",
+          200: "#F4DCCD",
+          300: "#EBC4AE",
+        },
         teal: {
           50: "#EEF6F5",
           100: "#D9ECEA",
@@ -54,6 +62,7 @@ module.exports = {
       boxShadow: {
         soft: "0 1px 2px rgba(28,26,23,0.04), 0 12px 32px -12px rgba(28,26,23,0.12)",
         lift: "0 2px 4px rgba(28,26,23,0.05), 0 24px 60px -20px rgba(28,26,23,0.25)",
+        tile: "0 1px 2px rgba(120,72,48,0.06), 0 8px 20px -12px rgba(120,72,48,0.22)",
       },
     },
   },

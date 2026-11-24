@@ -12,7 +12,15 @@ body {
 }
 
 body {
-  @apply bg-brand-50 text-brand-900 font-sans antialiased;
+  @apply bg-peach-50 text-brand-900 font-sans antialiased;
+}
+
+/* Horizontal chip rows scroll without showing a scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Visible keyboard focus everywhere (mouse clicks are unaffected). */
@@ -102,6 +110,21 @@ body {
 
 .label {
   @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-500;
+}
+
+/* Compact product tile (two-column grid). */
+.tile {
+  @apply relative flex h-full flex-col overflow-hidden rounded-2xl border border-peach-200/80 bg-white shadow-tile transition duration-300 hover:-translate-y-0.5 hover:shadow-soft;
+}
+
+/* Small coloured category label used on tiles and product pages. */
+.tag {
+  @apply inline-flex max-w-full items-center truncate rounded-full bg-blush-50 px-2.5 py-0.5 text-[11px] font-semibold text-blush-700;
+}
+
+/* Round icon button (back, save, filter) on light or photo backgrounds. */
+.icon-btn {
+  @apply grid h-10 w-10 shrink-0 place-items-center rounded-full border border-peach-200 bg-white/90 text-brand-800 shadow-tile backdrop-blur transition hover:bg-white active:scale-95;
 }
 
 .chip {

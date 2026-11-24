@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ChatIcon } from "@/components/ui/Icons";
 import { Alert, Spinner } from "@/components/ui/States";
 import type { CatalogProduct } from "@/lib/catalog";
 import { MAX_QUANTITY, WhatsAppLink, orderErrorMessage, orderRequestApi } from "@/lib/orderRequests";
@@ -36,38 +37,43 @@ export function OrderOptions({ product }: { product: CatalogProduct }) {
 
   if (outOfStock) {
     return (
-      <section className="card mt-10 space-y-3" aria-labelledby="how-to-order">
-        <h2 id="how-to-order" className="font-semibold text-brand-900">
+      <section className="mt-5 space-y-3 rounded-2xl bg-peach-50 p-4" aria-labelledby="how-to-order">
+        <h2 id="how-to-order" className="text-sm font-semibold text-brand-900">
           How to order
         </h2>
         <p className="text-sm text-brand-600">
           {product.retailer.name} lists this product as out of stock, so it can’t be requested right now.
         </p>
-        <Link href="/recommendations" className="btn-secondary">
+        <Link href="/recommendations" className="btn-secondary w-full">
           Find other products for my skin
         </Link>
       </section>
     );
   }
 
-  return (
-    <section className="card mt-10 space-y-5" aria-labelledby="how-to-order">
-      <h2 id="how-to-order" className="font-semibold text-brand-900">
-        How to order
-      </h2>
-      <p className="text-sm leading-relaxed text-brand-600">
-        Both options send a <strong>request</strong> to {product.retailer.name}. It isn’t a confirmed order until the
-        retailer confirms availability and the final price. No payment is taken on this website.
-      </p>
+  const waReady = waConfigured && !waError && wa?.available && wa.url;
+  const requestLink = (
+    <Link
+      href={`/products/${product.id}/request?quantity=${quantity}`}
+      className={waReady ? "btn-secondary w-full !py-3.5" : "btn-studio w-full !py-4 !text-[13px]"}
+    >
+      Request this product
+    </Link>
+  );
 
-      <div>
-        <label htmlFor="order-qty" className="text-xs text-brand-500">
-          Quantity
-        </label>
-        <div className="mt-1 w-28">
+  return (
+    <section className="mt-5 space-y-3" aria-labelledby="how-to-order">
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="how-to-order" className="text-sm font-semibold text-brand-900">
+          How to order
+        </h2>
+        <div className="flex items-center gap-2">
+          <label htmlFor="order-qty" className="text-xs text-brand-500">
+            Quantity
+          </label>
           <select
             id="order-qty"
-            className="input"
+            className="rounded-full border border-peach-200 bg-peach-50 px-3 py-1.5 text-sm text-brand-900"
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
           >
@@ -80,45 +86,44 @@ export function OrderOptions({ product }: { product: CatalogProduct }) {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-brand-900">Request on this website</h3>
-          <p className="text-xs text-brand-500">
-            Requires an account. You’ll get a reference and can follow its status under My requests.
-          </p>
-          <Link href={`/products/${product.id}/request?quantity=${quantity}`} className="btn-primary">
-            Request this product
-          </Link>
-        </div>
+      {waConfigured && !waError && !wa && <Spinner label="Preparing WhatsApp message" />}
+      {waReady && (
+        <a
+          href={wa.url ?? undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-studio w-full !py-4 !text-[13px]"
+        >
+          <ChatIcon />
+          Order via WhatsApp
+        </a>
+      )}
+      {requestLink}
 
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-brand-900">Order on WhatsApp</h3>
-          {!waConfigured ? (
-            <p className="text-xs text-brand-500">
-              {product.retailer.name} hasn’t set up WhatsApp ordering yet. Use a website request instead.
+      <div className="space-y-1.5 text-xs leading-relaxed text-brand-500">
+        <p>
+          {waReady ? "Both options send" : "This sends"} a <strong>request</strong> to {product.retailer.name}. It isn’t a confirmed order until the
+          retailer confirms availability and the final price. No payment is taken on this website.
+        </p>
+        <p>A website request needs an account; follow its status under My requests.</p>
+        {!waConfigured ? (
+          <p>{product.retailer.name} hasn’t set up WhatsApp ordering yet. Use a website request instead.</p>
+        ) : waError ? (
+          <Alert tone="error">{waError}</Alert>
+        ) : wa && wa.available && wa.url ? (
+          <>
+            <p>
+              WhatsApp opens with a message to {wa.retailer_name}. Nothing is sent until you press send, and the
+              retailer will see your WhatsApp number.
             </p>
-          ) : waError ? (
-            <Alert tone="error">{waError}</Alert>
-          ) : !wa ? (
-            <Spinner label="Preparing WhatsApp message" />
-          ) : wa.available && wa.url ? (
-            <>
-              <p className="text-xs text-brand-500">
-                Opens WhatsApp with a message to {wa.retailer_name}. Nothing is sent until you press send, and the
-                retailer will see your WhatsApp number.
-              </p>
-              <a href={wa.url} target="_blank" rel="noopener noreferrer" className="btn-secondary">
-                Open WhatsApp
-              </a>
-              <details className="text-xs text-brand-600">
-                <summary className="cursor-pointer">See the message</summary>
-                <pre className="mt-2 whitespace-pre-wrap font-sans">{wa.message}</pre>
-              </details>
-            </>
-          ) : (
-            <p className="text-xs text-brand-500">{wa.reason}</p>
-          )}
-        </div>
+            <details className="text-brand-600">
+              <summary className="cursor-pointer">See the message</summary>
+              <pre className="mt-2 whitespace-pre-wrap font-sans">{wa.message}</pre>
+            </details>
+          </>
+        ) : wa ? (
+          <p>{wa.reason}</p>
+        ) : null}
       </div>
     </section>
   );

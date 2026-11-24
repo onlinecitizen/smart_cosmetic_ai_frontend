@@ -28,7 +28,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label={t("nav.tabs")}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-200/80 bg-brand-50/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-peach-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-16px_rgba(120,72,48,0.35)] backdrop-blur-xl lg:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {tabs.map((tab) => {
@@ -38,19 +38,24 @@ export function BottomNav() {
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-1 text-[10.5px] font-semibold ${
-                  active ? "text-brand-900" : "text-brand-500"
+                className={`relative flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold transition ${
+                  active ? "text-teal-700" : "text-brand-500 hover:text-brand-800"
                 }`}
               >
-                <span
-                  className={`grid h-7 w-7 place-items-center rounded-full ${
-                    tab.studio ? "bg-teal-700 text-white" : active ? "bg-gold-100" : ""
-                  }`}
+                {active && <span aria-hidden className="absolute top-0 h-0.5 w-8 rounded-full bg-teal-700" />}
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-[22px] w-[22px]"
+                  fill={active && !tab.studio ? "currentColor" : "none"}
+                  fillOpacity={active ? 0.14 : 0}
+                  stroke="currentColor"
+                  strokeWidth={active ? 1.9 : 1.6}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  aria-hidden
                 >
-                  <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" aria-hidden>
-                    {tab.icon}
-                  </svg>
-                </span>
+                  {tab.icon}
+                </svg>
                 {t(tab.label)}
               </Link>
             </li>

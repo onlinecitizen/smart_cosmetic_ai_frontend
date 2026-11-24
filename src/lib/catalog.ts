@@ -10,8 +10,15 @@ export interface Option {
   label: string;
 }
 
+export interface CategoryNode extends Option {
+  attribute_group: string;
+  children?: CategoryNode[];
+}
+
 export interface CatalogOptions {
   categories: Option[];
+  /** Top-level groups (Skincare, Fragrance, ...) and their subcategories. Absent on old responses. */
+  category_tree?: CategoryNode[];
   skin_types: Option[];
   concerns: Option[];
   avoid_groups: (Option & { terms: string[] })[];
@@ -97,12 +104,31 @@ export interface RecommendationResult {
   limitations: string[];
 }
 
+/** Sort orders the backend supports (app/catalog/schemas.py ProductSort). */
+export type ProductSort = "name" | "price_asc" | "price_desc" | "recent";
+
+export const SORT_LABEL: Record<ProductSort, string> = {
+  name: "Name (A–Z)",
+  price_asc: "Price: low to high",
+  price_desc: "Price: high to low",
+  recent: "Newest",
+};
+
 export const catalogApi = {
   options: () => api.get<CatalogOptions>("/api/v1/catalog/options"),
-  list: (params: { category?: string; q?: string; limit?: number; offset?: number }) => {
+  list: (params: {
+    category?: string;
+    q?: string;
+    availability?: string;
+    sort?: ProductSort;
+    limit?: number;
+    offset?: number;
+  }) => {
     const qs = new URLSearchParams();
     if (params.category) qs.set("category", params.category);
     if (params.q) qs.set("q", params.q);
+    if (params.availability) qs.set("availability", params.availability);
+    if (params.sort && params.sort !== "name") qs.set("sort", params.sort);
     qs.set("limit", String(params.limit ?? 24));
     qs.set("offset", String(params.offset ?? 0));
     return api.get<ProductList>(`/api/v1/catalog/products?${qs.toString()}`);
@@ -138,4 +164,15 @@ export function avoidListError(terms: string[]): string | null {
   if (terms.length > 10) return "List at most 10 ingredients.";
   const bad = terms.find((t) => t.length < 3 || t.length > 60);
   return bad ? `“${bad}” must be between 3 and 60 characters.` : null;
+}
+
+/**
+ * Category code -> its top-level group (e.g. "perfume" -> Fragrance). Groups
+ * map to themselves. Unknown codes return null.
+ */
+export function groupOf(tree: CategoryNode[] | undefined, code: string): CategoryNode | null {
+  for (const group of tree ?? []) {
+    if (group.code === code || group.children?.some((c) => c.code === code)) return group;
+  }
+  return null;
 }

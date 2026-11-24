@@ -57,7 +57,7 @@ describe("OrderOptions", () => {
       "href",
       "/products/p1/request?quantity=1"
     );
-    const wa = await screen.findByRole("link", { name: "Open WhatsApp" });
+    const wa = await screen.findByRole("link", { name: "Order via WhatsApp" });
     expect(wa).toHaveAttribute("href", link(1).url);
     expect(wa).toHaveAttribute("target", "_blank");
     expect(wa).toHaveAttribute("rel", "noopener noreferrer");
@@ -72,10 +72,10 @@ describe("OrderOptions", () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(json(link(1))).mockResolvedValueOnce(json(link(3)));
     vi.stubGlobal("fetch", fetchMock);
     render(<OrderOptions product={product} />);
-    await screen.findByRole("link", { name: "Open WhatsApp" });
+    await screen.findByRole("link", { name: "Order via WhatsApp" });
 
     fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "3" } });
-    await waitFor(() => expect(screen.getByRole("link", { name: "Open WhatsApp" })).toHaveAttribute("href", link(3).url));
+    await waitFor(() => expect(screen.getByRole("link", { name: "Order via WhatsApp" })).toHaveAttribute("href", link(3).url));
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).items[0].quantity).toBe(3);
     expect(screen.getByRole("link", { name: "Request this product" })).toHaveAttribute(
       "href",
@@ -88,7 +88,7 @@ describe("OrderOptions", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<OrderOptions product={{ ...product, retailer: { ...product.retailer, whatsapp_available: false } }} />);
     expect(screen.getByText(/hasn’t set up WhatsApp ordering yet/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Open WhatsApp" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Order via WhatsApp" })).not.toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -97,7 +97,7 @@ describe("OrderOptions", () => {
     render(<OrderOptions product={{ ...product, availability: "out_of_stock" }} />);
     expect(screen.getByText(/out of stock, so it can’t be requested/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Request this product" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Open WhatsApp" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Order via WhatsApp" })).not.toBeInTheDocument();
   });
 
   it("shows an error state when the message can't be prepared", async () => {
